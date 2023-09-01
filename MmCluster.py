@@ -50,7 +50,7 @@ if __name__ == '__main__':
     train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.20, random_state=random_state)
 
     # Set a initial best chromosome for first population
-    best_chromosome = np.array([1, 1, 0, 0, 0, 0, 0])
+    best_chromosome = np.array([1, 1, 1, 1, 1, 1, 1])
 
     # Create GeneticSelector instance
     # You should not set the number of cores (n_jobs) in the Scikit-learn
