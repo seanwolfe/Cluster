@@ -311,12 +311,12 @@ class GeneticSelector:
                     for the best chromosome found in each generation.
         """
 
-        return np.array([
+        return [
             self.best_chromosome,
             self.val_scores,
             self.train_scores if self.calc_train_score else None,
             self.chromosomes_history
-        ])
+        ]
 
     def __initialize(self, n_genes: int):
         # Create population_size chromosomes
