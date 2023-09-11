@@ -320,7 +320,6 @@ class GeneticSelector:
             self.train_scores if self.calc_train_score else None,
             self.chromosomes_history]
 
-
     def __initialize(self, n_genes: int):
         # Create population_size chromosomes
         self.population = np.random.randint(
