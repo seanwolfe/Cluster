@@ -274,6 +274,7 @@ class GeneticSelector:
         elapsed_time = time.time() - init_time
         print('# Elapsed time: %.2f seconds' % elapsed_time)
 
+
     def __save_output_results(self, val_score: float,
                               best_current_chromosome: np.ndarray,
                               train_score: float = None):
@@ -295,6 +296,8 @@ class GeneticSelector:
             self.train_scores.append(train_score)
         self.chromosomes_history.append(best_current_chromosome)
 
+        return
+
     def support(self) -> np.ndarray:
         """
             Return an array with 4 values:
@@ -315,13 +318,14 @@ class GeneticSelector:
             self.best_chromosome,
             self.val_scores,
             self.train_scores if self.calc_train_score else None,
-            self.chromosomes_history
-        ]
+            self.chromosomes_history]
 
     def __initialize(self, n_genes: int):
         # Create population_size chromosomes
         self.population = np.random.randint(
             2, size=(self.population_size, n_genes))
+
+        return
 
     def estimate(self, chromosome: np.ndarray) -> float:
         # Select those features with ones in chromosome

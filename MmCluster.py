@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import sklearn.metrics
+
 from GeneticAlgorithm.genetic_selector import GeneticSelector
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -9,7 +11,6 @@ import skfuzzy as fuzz
 from sklearn.cluster import OPTICS, cluster_optics_dbscan
 from sklearn import preprocessing
 import matplotlib.gridspec as gridspec
-
 
 rx_dict = {
     'Best chromosome': re.compile(r"Best chromosome: \[(?P<bchrome>(\d+ ){17}\d)"),
@@ -151,7 +152,14 @@ def feature_selection_main():
                                      "Earth (Helio) vz at Capture")],
                 cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
                                      "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture", "Capture Date"
-                                     )]]
+                                     )], cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
+                                      "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
+                                      "Moon (Helio) x at Capture", "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                      "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                      "Moon (Helio) vz at Capture", "Earth (Helio) x at Capture",
+                                      "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
+                                      "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
+                                      "Earth (Helio) vz at Capture", "Capture Date")]]
 
     # Set random state
     random_state = 42
@@ -160,25 +168,30 @@ def feature_selection_main():
     rf_reg = RandomForestRegressor(n_estimators=250, random_state=random_state)
 
     # Load example dataset from Scikit-learn
-    one = 0
+    one = 2  # one for 7-element epoch features or 0 for 18-elements state vector based features
     X = pd.DataFrame(data=features[one])
-    y = pd.Series(data=targets.loc[:, '1 Hill Duration'])
+    y = pd.Series(data=targets.loc[:, 'Min. Distance'])
 
     # Split into train and test
     train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.10, random_state=random_state)
 
     # Set a initial best chromosome for first population
-    best_chromosome = np.array([1, 0, 0, 0, 0, 0, 0]) if one == 1 else np.array(
-        [0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0])
+
+    # optimal is: [0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0] for tco-moon-earth,
+    # generic is: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] for tco-moon-earth
+    if one == 0:
+        best_chromosome = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    elif one == 1:
+        best_chromosome = np.array([1, 0, 0, 0, 0, 0, 0])
+    else:
+        best_chromosome = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     # Create GeneticSelector instance
     # You should not set the number of cores (n_jobs) in the Scikit-learn
     # model to avoid UserWarning. The genetic selector is already parallelizable.
-    genetic_selector = GeneticSelector(
-        estimator=rf_reg, scoring='neg_root_mean_squared_error', cv=5, n_gen=3, population_size=10,
-        crossover_rate=0.8, mutation_rate=0.15, tournament_k=2,
-        calc_train_score=True, initial_best_chromosome=best_chromosome,
-        n_jobs=-1, random_state=random_state, verbose=0)
+    genetic_selector = GeneticSelector(estimator=rf_reg, scoring='neg_root_mean_squared_error', cv=5, n_gen=30, population_size=10,
+                                       crossover_rate=0.8, mutation_rate=0.15, tournament_k=2,
+                                       calc_train_score=True, initial_best_chromosome=best_chromosome, n_jobs=-1, random_state=random_state, verbose=0)
 
     # Fit features
     genetic_selector.fit(train_X, train_y)
