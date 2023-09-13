@@ -20,6 +20,8 @@ from sklearn.cluster import DBSCAN, HDBSCAN
 from sklearn.datasets import make_blobs
 from MmCluster import preprocessing_main
 from sklearn import preprocessing
+import pandas as pd
+import os
 
 
 def plot(X, labels, probabilities=None, parameters=None, ground_truth=False, ax=None):
@@ -152,25 +154,165 @@ PARAMS = [({"min_cluster_size": 100, "min_samples": 350}, {"min_cluster_size": 1
           ({"min_cluster_size": 50, "min_samples": 50}, {"min_cluster_size": 150, "min_samples": 80},
            {"min_cluster_size": 200, "min_samples": 50}), ({"min_cluster_size": 90, "min_samples": 100},), ()]
 
+PARAMS = [({"min_cluster_size": 100, "min_samples": 100},)]
+# np.set_printoptions(threshold=np.inf)
 for i, params in enumerate(PARAMS):
     for j, param in enumerate(params):
         if param:
             print(param)
             hdb = HDBSCAN(**param).fit(types[i])
             labels = hdb.labels_
-            fig, axes = plt.subplots(figsize=(7, 5))
-            plot(train[:, :2], labels, hdb.probabilities_, param, ax=axes)
-            fig, axes = plt.subplots(figsize=(7, 5))
-            plot(types[i][:, :2], labels, hdb.probabilities_, param, ax=axes)
-            fig, axes = plt.subplots(figsize=(7, 5))
-            plot(train[:, 1:], labels, hdb.probabilities_, param, ax=axes)
-            fig, axes = plt.subplots(figsize=(7, 5))
-            plot(types[i][:, 1:], labels, hdb.probabilities_, param, ax=axes)
-            fig, axes = plt.subplots(figsize=(7, 5))
-            plot(train[:, [0, 2]], labels, hdb.probabilities_, param, ax=axes)
-            fig, axes = plt.subplots(figsize=(7, 5))
-            plot(types[i][:, [0, 2]], labels, hdb.probabilities_, param, ax=axes)
-            plt.show()
+            cluster_ids = []
+            for idx, id in enumerate(set(labels)):
+                cluster_id = [i for i, value in enumerate(labels) if value == id]
+
+                cluster_ids.append(cluster_id)
+
+train_vals = []
+for idx, cluster in enumerate(cluster_ids):
+    train_val = train[cluster, :]
+    train_vals.append(train_val)
+
+master_data = pd.read_csv('minimoon_master_final.csv', sep=" ", header=0, names=['Object id', 'H', 'D', 'Capture Date',
+                                                             'Helio x at Capture', 'Helio y at Capture',
+                                                             'Helio z at Capture', 'Helio vx at Capture',
+                                                             'Helio vy at Capture', 'Helio vz at Capture',
+                                                             'Helio q at Capture', 'Helio e at Capture',
+                                                             'Helio i at Capture', 'Helio Omega at Capture',
+                                                             'Helio omega at Capture', 'Helio M at Capture',
+                                                             'Geo x at Capture', 'Geo y at Capture',
+                                                             'Geo z at Capture', 'Geo vx at Capture',
+                                                             'Geo vy at Capture', 'Geo vz at Capture',
+                                                             'Geo q at Capture', 'Geo e at Capture',
+                                                             'Geo i at Capture', 'Geo Omega at Capture',
+                                                             'Geo omega at Capture', 'Geo M at Capture',
+                                                             'Moon (Helio) x at Capture',
+                                                             'Moon (Helio) y at Capture',
+                                                             'Moon (Helio) z at Capture',
+                                                             'Moon (Helio) vx at Capture',
+                                                             'Moon (Helio) vy at Capture',
+                                                             'Moon (Helio) vz at Capture',
+                                                             'Capture Duration', 'Spec. En. Duration',
+                                                             '3 Hill Duration', 'Number of Rev',
+                                                             '1 Hill Duration', 'Min. Distance',
+                                                             'Release Date', 'Helio x at Release',
+                                                             'Helio y at Release', 'Helio z at Release',
+                                                             'Helio vx at Release', 'Helio vy at Release',
+                                                             'Helio vz at Release', 'Helio q at Release',
+                                                             'Helio e at Release', 'Helio i at Release',
+                                                             'Helio Omega at Release',
+                                                             'Helio omega at Release',
+                                                             'Helio M at Release', 'Geo x at Release',
+                                                             'Geo y at Release', 'Geo z at Release',
+                                                             'Geo vx at Release', 'Geo vy at Release',
+                                                             'Geo vz at Release', 'Geo q at Release',
+                                                             'Geo e at Release', 'Geo i at Release',
+                                                             'Geo Omega at Release',
+                                                             'Geo omega at Release', 'Geo M at Release',
+                                                             'Moon (Helio) x at Release',
+                                                             'Moon (Helio) y at Release',
+                                                             'Moon (Helio) z at Release',
+                                                             'Moon (Helio) vx at Release',
+                                                             'Moon (Helio) vy at Release',
+                                                             'Moon (Helio) vz at Release', 'Retrograde',
+                                                             'Became Minimoon', 'Max. Distance', 'Capture Index',
+                                                             'Release Index', 'X at Earth Hill', 'Y at Earth Hill',
+                                                             'Z at Earth Hill', 'Taxonomy', 'STC', "EMS Duration",
+                                                             "Periapsides in EMS", "Periapsides in 3 Hill",
+                                                             "Periapsides in 2 Hill", "Periapsides in 1 Hill",
+                                                             "STC Start", "STC Start Index", "STC End", "STC End Index",
+                                                             "Helio x at EMS", "Helio y at EMS", "Helio z at EMS",
+                                                             "Helio vx at EMS", "Helio vy at EMS", "Helio vz at EMS",
+                                                             "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                                             "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                                             "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)",
+                                                             "Moon x at EMS (Helio)", "Moon y at EMS (Helio)",
+                                                             "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                                             "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)",
+                                                             'Entry Date to EMS', 'Entry to EMS Index',
+                                                             'Exit Date to EMS', 'Exit Index to EMS',
+                                                             "Dimensional Jacobi", "Non-Dimensional Jacobi", 'Alpha_I',
+                                                             'Beta_I', 'Theta_M'])
+final_clusters = []
+columns_to_compare = ['1 Hill Duration', 'Min. Distance']
+df_to_compare = master_data[columns_to_compare].to_numpy()
+
+# go through all the files of test particles
+population_dir = os.path.join('~/Documents/sean/minimoon_integrations', 'minimoon_files_oorb')
+# variables
+one_hill = 0.01
+seconds_in_day = 86400
+km_in_au = 149597870700 / 1000
+mu_e = 3.986e5 * seconds_in_day ** 2 / np.power(km_in_au, 3)  # km^3/s^2
+
+for j, cluster_vals in enumerate(train_vals):
+
+    matching_indices = np.where(np.all(df_to_compare[:, None, :] == cluster_vals, axis=-1))
+
+    ############################################################
+    # for adding characteristics that don't exist
+    ############################################################
+    for i, cluster_item in enumerate(matching_indices[0]):
+        print(i)
+        if i > 3:
+            break
+        master_i = master_data.iloc[cluster_item]
+        name = str(master_i['Object id']) + ".csv"
+        data_i = pd.read_csv(population_dir + '/' + name,  sep=" ", header=0, names=["Object id", "Julian Date", "Distance", "Helio q",
+        "Helio e", "Helio i", "Helio Omega", "Helio omega", "Helio M", "Helio x", "Helio y", "Helio z", "Helio vx",
+        "Helio vy", "Helio vz", "Geo x", "Geo y", "Geo z", "Geo vx", "Geo vy", "Geo vz", "Geo q", "Geo e", "Geo i",
+        "Geo Omega", "Geo omega", "Geo M", "Earth x (Helio)", "Earth y (Helio)", "Earth z (Helio)", "Earth vx (Helio)",
+        "Earth vy (Helio)", "Earth vz (Helio)", "Moon x (Helio)", "Moon y (Helio)", "Moon z (Helio)", "Moon vx (Helio)",
+        "Moon vy (Helio)", "Moon vz (Helio)", "Synodic x", "Synodic y", "Synodic z", "Eclip Long"])
+
+        # indices of trajectory when insides one hill
+        in_1hill_idxs = [index for index, value in enumerate(data_i['Distance']) if value <= one_hill]
+        # Get 1 Hill entrance and last exit indices
+
+        # Get index of minimum distance and min dist.
+        min_dist = min(data_i['Distance'])
+        min_dist_index = data_i.index[data_i['Distance'] == min_dist]
+
+        # Get min specific energy
+        spec_energy_in_one_hill_temp = [(np.linalg.norm([data_i['Geo vx'].iloc[i], data_i['Geo vy'].iloc[i],
+                                        data_i['Geo vz'].iloc[i]]) ** 2 / 2 - mu_e / data_i['Distance'].iloc[i]) * km_in_au ** 2 / seconds_in_day ** 2
+                                        for i, value in data_i.iterrows()]
+        if in_1hill_idxs:
+            one_hill_start_idx = in_1hill_idxs[0]
+            one_hill_end_idx = in_1hill_idxs[-1]
+
+            spec_energy_in_one_hill = spec_energy_in_one_hill_temp[one_hill_start_idx:one_hill_end_idx]
+            min_spec_energy = min(spec_energy_in_one_hill)
+            min_spec_energy_ind = pd.Series(spec_energy_in_one_hill).idxmin()
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot()
+        ax1.plot(data_i['Julian Date'] - data_i['Julian Date'].iloc[0], data_i['Distance'], label='Geocentric Distance', color='grey', linewidth=1)
+        ax1.scatter(data_i['Julian Date'].iloc[min_dist_index] - data_i['Julian Date'].iloc[0], data_i['Distance'].iloc[min_dist_index], color='black', label='Min. Distance')
+        ax1.scatter(master_i['Capture Date'] - data_i['Julian Date'].iloc[0], data_i['Distance'].iloc[master_i['Capture Index']], color='yellow', label='Capture Start')
+        ax1.set_ylabel('Distance to Earth (AU)')
+        ax1.set_xlabel('Time (days)')
+        ax1.set_title(str(master_i['Object id']))
+
+        ax2 = ax1.twinx()
+        ax2.plot(data_i['Julian Date'] - data_i['Julian Date'].iloc[0], spec_energy_in_one_hill_temp, color='tab:purple')
+
+        if in_1hill_idxs:
+            ax1.scatter(data_i['Julian Date'].iloc[one_hill_start_idx] - data_i['Julian Date'].iloc[0], data_i['Distance'].iloc[one_hill_start_idx], color='red', label='One Hill Start')
+            ax1.scatter(data_i['Julian Date'].iloc[one_hill_end_idx] - data_i['Julian Date'].iloc[0] , data_i['Distance'].iloc[one_hill_end_idx],
+                        color='blue', label='One Hill End')
+            ax1.plot(data_i['Julian Date'].iloc[one_hill_start_idx:one_hill_end_idx] - data_i['Julian Date'].iloc[0],
+                     data_i['Distance'].iloc[one_hill_start_idx:one_hill_end_idx],
+                     label='Days in 1 Hill: ' + str(round(master_i['1 Hill Duration'], 2)), color='green', linewidth=3)
+
+            ax2.scatter(data_i['Julian Date'].iloc[min_spec_energy_ind + one_hill_start_idx] - data_i['Julian Date'].iloc[0], min_spec_energy, color='pink', label='Min. Spec Energy')
+        ax2.set_ylabel('Spec. Energy ($km^2/s^2$)', color='tab:purple')
+        ax2.tick_params(axis='y', labelcolor='tab:purple')
+        ax1.legend(loc='upper right')
+        ax1.set_ylim([0, 0.03])
+        ax2.legend(loc='upper left')
+        ax2.set_ylim([-1, 1])
+        plt.show()
 
 # %%
 # `dbscan_clustering`

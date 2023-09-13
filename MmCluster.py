@@ -11,6 +11,10 @@ import skfuzzy as fuzz
 from sklearn.cluster import OPTICS, cluster_optics_dbscan
 from sklearn import preprocessing
 import matplotlib.gridspec as gridspec
+from sklearn import svm
+from sklearn.pipeline import make_pipeline
+import sklearn as sk
+from sklearn.neural_network import MLPRegressor
 
 rx_dict = {
     'Best chromosome': re.compile(r"Best chromosome: \[(?P<bchrome>(\d+ ){17}\d)"),
@@ -18,8 +22,10 @@ rx_dict = {
     'Best epoch': re.compile(r'Best epoch: (?P<bepoch>\d+)'),
     'Test scores': re.compile(r'Test scores: \[(?P<tscore>(-?\d+.\d+, ){30}-?\d+.\d+)'),
     'Train scores': re.compile(r'Train scores: \[(?P<trscore>(-?\d+.\d+, ){30}-?\d+.\d+)'),
-    'Chromosomes history': re.compile(r'Chromosomes history: \[(?P<chist>(array\(\[(\d, ){17}\d\]\), ){30}array\(\[(\d, ){17}\d\]\)\])')
+    'Chromosomes history': re.compile(
+        r'Chromosomes history: \[(?P<chist>(array\(\[(\d, ){17}\d\]\), ){30}array\(\[(\d, ){17}\d\]\)\])')
 }
+
 
 def _parse_line(line):
     """
@@ -34,6 +40,7 @@ def _parse_line(line):
             return key, match
     # if there are no matches
     return None, None
+
 
 def parser(filepath):
     data = []  # create an empty list to collect the data
@@ -85,9 +92,9 @@ def parser(filepath):
 
     return bchromes, bscores, bepochs, tscores, trscores, chists
 
+
 @staticmethod
 def parse_main():
-
     bchromes_tot = []
     bscores_tot = []
     bepochs_tot = []
@@ -112,13 +119,15 @@ def parse_main():
     print(trscores_tot)
     num_est = [100, 150, 200, 250, 300, 350, 400, 450]
     plt.plot(num_est, [-bscore[0] for idx, bscore in enumerate(bscores_tot)], color='blue', label='Testing Score')
-    plt.plot(num_est, [-max(trscores[0]) for idx, trscores in enumerate(trscores_tot)], color='red', label='Training Score')
+    plt.plot(num_est, [-max(trscores[0]) for idx, trscores in enumerate(trscores_tot)], color='red',
+             label='Training Score')
     plt.xlabel('Number of Estimators')
     plt.ylabel('Root Mean Square Error (days)')
     plt.legend()
     plt.show()
 
     return
+
 
 @staticmethod
 def feature_selection_main():
@@ -152,14 +161,16 @@ def feature_selection_main():
                                      "Earth (Helio) vz at Capture")],
                 cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
                                      "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture", "Capture Date"
-                                     )], cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
-                                      "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
-                                      "Moon (Helio) x at Capture", "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
-                                      "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
-                                      "Moon (Helio) vz at Capture", "Earth (Helio) x at Capture",
-                                      "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
-                                      "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
-                                      "Earth (Helio) vz at Capture", "Capture Date")]]
+                                     )],
+                cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
+                                     "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
+                                     "Moon (Helio) x at Capture", "Moon (Helio) y at Capture",
+                                     "Moon (Helio) z at Capture",
+                                     "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                     "Moon (Helio) vz at Capture", "Earth (Helio) x at Capture",
+                                     "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
+                                     "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
+                                     "Earth (Helio) vz at Capture", "Capture Date")]]
 
     # Set random state
     random_state = 42
@@ -189,9 +200,11 @@ def feature_selection_main():
     # Create GeneticSelector instance
     # You should not set the number of cores (n_jobs) in the Scikit-learn
     # model to avoid UserWarning. The genetic selector is already parallelizable.
-    genetic_selector = GeneticSelector(estimator=rf_reg, scoring='neg_root_mean_squared_error', cv=5, n_gen=30, population_size=10,
+    genetic_selector = GeneticSelector(estimator=rf_reg, scoring='neg_root_mean_squared_error', cv=5, n_gen=30,
+                                       population_size=10,
                                        crossover_rate=0.8, mutation_rate=0.15, tournament_k=2,
-                                       calc_train_score=True, initial_best_chromosome=best_chromosome, n_jobs=-1, random_state=random_state, verbose=0)
+                                       calc_train_score=True, initial_best_chromosome=best_chromosome, n_jobs=-1,
+                                       random_state=random_state, verbose=0)
 
     # Fit features
     genetic_selector.fit(train_X, train_y)
@@ -215,37 +228,223 @@ def feature_selection_main():
     return
 
 
-def fuzzy_c_main(data):
+@staticmethod
+def make_set(master, variable, axislabel, ylim):
+    fig8 = plt.figure()
+    ax1 = plt.subplot(3, 3, 1)
+    ax1.scatter(master['Helio x at Capture'], variable, s=0.1)
+    ax1.set_xlabel('Helio x at Capture (AU)')
+    ax1.set_ylabel(axislabel)
+    ax1.set_ylim(ylim)
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
 
-    colors = ['b', 'orange', 'g', 'r', 'c', 'm', 'y', 'k', 'Brown', 'ForestGreen']
+    ax2 = plt.subplot(3, 3, 2)
+    ax2.scatter(master['Helio y at Capture'], variable, s=0.1)
+    ax2.set_xlabel('Helio y at Capture (AU)')
+    ax2.set_ylabel(axislabel)
+    ax2.set_ylim(ylim)
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(3, 3, 3)
+    ax3.scatter(master['Helio z at Capture'], variable, s=0.1)
+    ax3.set_xlabel('Helio z at Capture (AU)')
+    ax3.set_ylabel(axislabel)
+    ax3.set_ylim(ylim)
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(3, 3, 4)
+    ax4.scatter(master['Helio vx at Capture'], variable, s=0.1)
+    ax4.set_xlabel('Helio vx at Capture')
+    ax4.set_ylabel(axislabel)
+    ax4.set_ylim(ylim)
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(3, 3, 5)
+    ax5.scatter(master['Helio vy at Capture'], variable, s=0.1)
+    ax5.set_xlabel('Helio vy at Capture')
+    ax5.set_ylabel(axislabel)
+    ax5.set_ylim(ylim)
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(3, 3, 6)
+    ax6.scatter(master['Helio vz at Capture'], variable, s=0.1)
+    ax6.set_xlabel('Helio vz at Capture')
+    ax6.set_ylabel(axislabel)
+    ax6.set_ylim(ylim)
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+
+    ax7 = plt.subplot(3, 3, 7)
+    ax7.scatter(master['Capture Date'], variable, s=0.1)
+    ax7.set_xlabel('Capture Date (JD)')
+    ax7.set_ylabel(axislabel)
+    ax7.set_ylim(ylim)
+
+    fig8 = plt.figure()
+    ax1 = plt.subplot(2, 3, 1)
+    ax1.scatter(master['Moon (Helio) x at Capture'], variable, s=0.1)
+    ax1.set_xlabel('Moon (Helio) x at Capture (AU)')
+    ax1.set_ylabel(axislabel)
+    ax1.set_ylim(ylim)
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
+
+    ax2 = plt.subplot(2, 3, 2)
+    ax2.scatter(master['Moon (Helio) y at Capture'], variable, s=0.1)
+    ax2.set_xlabel('Moon (Helio) y at Capture (AU)')
+    ax2.set_ylabel(axislabel)
+    ax2.set_ylim(ylim)
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(2, 3, 3)
+    ax3.scatter(master['Moon (Helio) z at Capture'], variable, s=0.1)
+    ax3.set_xlabel('Moon (Helio) z at Capture (AU)')
+    ax3.set_ylabel(axislabel)
+    ax3.set_ylim(ylim)
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(2, 3, 4)
+    ax4.scatter(master['Moon (Helio) vx at Capture'], variable, s=0.1)
+    ax4.set_xlabel('Moon (Helio) vx at Capture')
+    ax4.set_ylabel(axislabel)
+    ax4.set_ylim(ylim)
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(2, 3, 5)
+    ax5.scatter(master['Moon (Helio) vy at Capture'], variable, s=0.1)
+    ax5.set_xlabel('Moon (Helio) vy at Capture')
+    ax5.set_ylabel(axislabel)
+    ax5.set_ylim(ylim)
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(2, 3, 6)
+    ax6.scatter(master['Moon (Helio) vz at Capture'], variable, s=0.1)
+    ax6.set_xlabel('Moon (Helio) vz at Capture')
+    ax6.set_ylabel(axislabel)
+    ax6.set_ylim(ylim)
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+
+    fig8 = plt.figure()
+    ax1 = plt.subplot(2, 3, 1)
+    ax1.scatter(master['Earth (Helio) x at Capture'], variable, s=0.1)
+    ax1.set_xlabel('Earth (Helio) x at Capture (AU)')
+    ax1.set_ylabel(axislabel)
+    ax1.set_ylim(ylim)
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
+
+    ax2 = plt.subplot(2, 3, 2)
+    ax2.scatter(master['Earth (Helio) y at Capture'], variable, s=0.1)
+    ax2.set_xlabel('Earth (Helio) y at Capture (AU)')
+    ax2.set_ylabel(axislabel)
+    ax2.set_ylim(ylim)
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(2, 3, 3)
+    ax3.scatter(master['Earth (Helio) z at Capture'], variable, s=0.1)
+    ax3.set_xlabel('Earth (Helio) z at Capture (AU)')
+    ax3.set_ylabel(axislabel)
+    ax3.set_ylim(ylim)
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(2, 3, 4)
+    ax4.scatter(master['Earth (Helio) vx at Capture'], variable, s=0.1)
+    ax4.set_xlabel('Earth (Helio) vx at Capture')
+    ax4.set_ylabel(axislabel)
+    ax4.set_ylim(ylim)
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(2, 3, 5)
+    ax5.scatter(master['Earth (Helio) vy at Capture'], variable, s=0.1)
+    ax5.set_xlabel('Earth (Helio) vy at Capture')
+    ax5.set_ylabel(axislabel)
+    ax5.set_ylim(ylim)
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(2, 3, 6)
+    ax6.scatter(master['Earth (Helio) vz at Capture'], variable, s=0.1)
+    ax6.set_xlabel('Earth (Helio) vz at Capture')
+    ax6.set_ylabel(axislabel)
+    ax6.set_ylim(ylim)
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+
+
+def fuzzy_c_main(data):
+    file_path = 'cluster_df_pruned.csv'
+    cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0, names=["1 Hill Duration", "Min. Distance",
+                                                                        "Helio x at Capture", "Helio y at Capture",
+                                                                        "Helio z at Capture", "Helio vx at Capture",
+                                                                        "Helio vy at Capture", "Helio vz at Capture",
+                                                                        "Moon (Helio) x at Capture",
+                                                                        "Moon (Helio) y at Capture",
+                                                                        "Moon (Helio) z at Capture",
+                                                                        "Moon (Helio) vx at Capture",
+                                                                        "Moon (Helio) vy at Capture",
+                                                                        "Moon (Helio) vz at Capture",
+                                                                        "Capture Date", "Earth (Helio) x at Capture",
+                                                                        "Earth (Helio) y at Capture",
+                                                                        "Earth (Helio) z at Capture",
+                                                                        "Earth (Helio) vx at Capture",
+                                                                        "Earth (Helio) vy at Capture",
+                                                                        "Earth (Helio) vz at Capture"])
+
+    # make_set(cluster_data_ini, cluster_data_ini['1 Hill Duration'], '1 Hill Duration', [0, 400])
+    # make_set(cluster_data_ini, cluster_data_ini['Min. Distance'], 'Min. Distance', [0, 0.01])
+
+    colors = ['b', 'orange', 'g', 'r', 'c', 'm', 'y', 'k', 'Brown', 'ForestGreen', 'grey', 'b', 'orange', 'g', 'r', 'c',
+              'm', 'y', 'k', 'Brown', 'ForestGreen', 'grey']
 
     # determining the optimal number of clusters
     fpcs = []
-    for ncenters in range(2, 10):
+    for ncenters in range(2, 15):
         print(ncenters)
         cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-            data.T, ncenters, 2, error=0.005, maxiter=5000, init=None)
-
-        fig1, axes1 = plt.subplots(figsize=(5, 5))
-        xpts = data[:, 0]
-        ypts = data[:, 1]
+            np.array([cluster_data_ini['1 Hill Duration'].to_numpy()]), ncenters, 2, error=0.005, maxiter=5000,
+            init=None)
 
         # highest cluster membership
         cluster_membership = np.argmax(u, axis=0)
 
+        fig = plt.figure()
         for j in range(ncenters):
-            axes1.plot(xpts[cluster_membership == j], ypts[cluster_membership == j], '.', markersize=0.5, color=colors[j])
+            plt.scatter(cluster_data_ini['1 Hill Duration'], u[j, :], color=colors[j], s=1, label='Cluster: ' + str(j))
+            plt.xlabel('1 Hill Duration')
+            plt.ylabel('Memebership')
+            plt.legend()
+
+        # fig, ax = plt.subplots()
+        # for j in range(ncenters):
+        # Set the bin size
+        # bin_size = 5
+        # pts = cluster_data_ini['1 Hill Duration'].iloc[cluster_membership == j]
+        # Calculate the number of bins based on data range and bin size
+        # data_range = max(pts) - min(pts)
+        # num_bins = int(data_range / bin_size)
+        # plt.hist(pts, color=colors[j], bins=num_bins)
+        # plt.xlim([0, 2500])
+        # plt.title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
+        # plt.xlabel('1 Hill Duration (days)')
+        # plt.ylabel('Count')
+
+        # fig1, axes1 = plt.subplots(figsize=(5, 5))
+        # xpts = data[:, 0]
+        # ypts = data[:, 1]
+
+        # for j in range(ncenters):
+        #     axes1.plot(xpts[cluster_membership == j], ypts[cluster_membership == j], '.', markersize=0.5, color=colors[j])
 
         # Mark the center of each fuzzy cluster
-        for pt in cntr:
-            axes1.plot(pt[0], pt[1], 'rs')
-
-        axes1.set_title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
-        fig1.tight_layout()
+        # for pt in cntr:
+        #     axes1.plot(pt[0], pt[1], 'rs')
+        #
+        # axes1.set_title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
+        # fig1.tight_layout()
 
         # Store fpc values for later
         fpcs.append(fpc)
+        # plt.show()
     print(fpcs)
+    fig = plt.figure()
+    plt.plot(np.linspace(2, 14, len(fpcs)), fpcs)
+    plt.xlabel('Number of Clusters')
+    plt.ylabel('Fuzzy Partition Index')
     plt.show()
 
     # for prediction
@@ -269,18 +468,17 @@ def fuzzy_c_main(data):
     #     highest cluster membership
     #     cluster_membership = np.argmax(point)
 
-        # print(cluster_targets)
+    # print(cluster_targets)
 
-        # print("Fuzzy c-means predicts this object belongs to cluster: " + str(cluster_membership))
-        # print("This cluster has duration in 1 Hill: " + str(cluster_targets[cluster_membership]))
-        # print("This object has duration in 1 Hill: " + str(validation_data.iloc[idx]))
-        # print("Error: " + str(abs(cluster_targets[cluster_membership]
-        #                       - validation_data.iloc[idx])))
-        # print("This cluster has minimum distance: " + str(cluster_targets[cluster_membership, 1]))
-        # print("This object has minimum distance: " + str(validation_data['Min. Distance'].iloc[idx]))
-        # print("Error: " + str(abs(cluster_targets[cluster_membership, 1]
-        #                       - validation_data['Min. Distance'].iloc[idx])))
-
+    # print("Fuzzy c-means predicts this object belongs to cluster: " + str(cluster_membership))
+    # print("This cluster has duration in 1 Hill: " + str(cluster_targets[cluster_membership]))
+    # print("This object has duration in 1 Hill: " + str(validation_data.iloc[idx]))
+    # print("Error: " + str(abs(cluster_targets[cluster_membership]
+    #                       - validation_data.iloc[idx])))
+    # print("This cluster has minimum distance: " + str(cluster_targets[cluster_membership, 1]))
+    # print("This object has minimum distance: " + str(validation_data['Min. Distance'].iloc[idx]))
+    # print("Error: " + str(abs(cluster_targets[cluster_membership, 1]
+    #                       - validation_data['Min. Distance'].iloc[idx])))
 
     #
     # fig2, axes2 = plt.subplots(figsize=(8, 8))
@@ -328,43 +526,22 @@ def fuzzy_c_main(data):
     # ax2.set_ylabel("Fuzzy partition coefficient")
     # plt.show()
 
+
 @staticmethod
-def preprocessing_main():
-
-    file_path = 'cluster_df_pruned.csv'
-    cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0, names=["1 Hill Duration", "Min. Distance",
-                                                                        "Helio x at Capture", "Helio y at Capture",
-                                                                        "Helio z at Capture", "Helio vx at Capture",
-                                                                        "Helio vy at Capture", "Helio vz at Capture",
-                                                                        "Moon (Helio) x at Capture",
-                                                                        "Moon (Helio) y at Capture",
-                                                                        "Moon (Helio) z at Capture",
-                                                                        "Moon (Helio) vx at Capture",
-                                                                        "Moon (Helio) vy at Capture",
-                                                                        "Moon (Helio) vz at Capture",
-                                                                        "Capture Date", "Earth (Helio) x at Capture",
-                                                                        "Earth (Helio) y at Capture",
-                                                                        "Earth (Helio) z at Capture",
-                                                                        "Earth (Helio) vx at Capture",
-                                                                        "Earth (Helio) vy at Capture",
-                                                                        "Earth (Helio) vz at Capture"])
-
-    cluster_data_train, cluster_data_test = train_test_split(cluster_data_ini.loc[:,
-                                                             ('Helio vz at Capture', '1 Hill Duration', 'Min. Distance')], test_size=0.1,
-                                                             random_state=0)
-
+def preprocessing_main(X, y):
     # fig = plt.figure()
     # plt.hist(cluster_data['Helio vz at Capture'], 1000)
     # fig = plt.figure()
     # plt.hist(cluster_data_train['1 Hill Duration'], 1000)
     # fig = plt.figure()
     # plt.hist(cluster_data_train['Min. Distance'], 1000)
-
+    random_state = 42
+    train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.10, random_state=random_state)
     quantile_transformer = preprocessing.QuantileTransformer(output_distribution='normal', random_state=0)
-    cluster_data_trans = quantile_transformer.fit_transform(cluster_data_train)
-    scalar = preprocessing.StandardScaler().fit(cluster_data_train.to_numpy())
-    train_scaled = scalar.transform(cluster_data_train.to_numpy())
-    train_normed = preprocessing.normalize(cluster_data_train.to_numpy(), norm='l2')
+    cluster_data_trans = quantile_transformer.fit_transform(test_X)
+    scalar = preprocessing.StandardScaler().fit(train_X.to_numpy())
+    train_scaled = scalar.transform(train_X.to_numpy())
+    train_normed = preprocessing.normalize(train_X.to_numpy(), norm='l2')
 
     # fig = plt.figure()
     # plt.hist(cluster_data_trans[:, 0], 1000)
@@ -374,10 +551,11 @@ def preprocessing_main():
     # plt.hist(cluster_data_trans[:, 2], 1000)
     # plt.show()
 
-    return cluster_data_trans, train_scaled, train_normed, cluster_data_train.to_numpy(), cluster_data_test.to_numpy()
+    return (cluster_data_trans, train_scaled, train_normed, train_X.to_numpy(), train_y.to_numpy(), test_X.to_numpy(),
+            test_y.to_numpy())
+
 
 def OPTICS_main(cluster_data_train, cluster_data_trans):
-
     clust = OPTICS(min_samples=50, xi=0.0048, min_cluster_size=0.05)
 
     # Run the fit
@@ -451,10 +629,46 @@ def OPTICS_main(cluster_data_train, cluster_data_trans):
     plt.tight_layout()
     plt.show()
 
-if __name__ == '__main__':
 
+def estimator_tests():
+    file_path = 'cluster_df_pruned.csv'
+    cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
+                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',                                          'STC',                                          "Became Minimoon", "3 Hill Duration", "Helio x at Capture", "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture", "Moon (Helio) y at Capture", "Moon (Helio) z at Capture", "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture", "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS", "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS", "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)", "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)", "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)", "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)", "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)" "Entry Date to EMS" "Earth (Helio) x at Capture" "Earth (Helio) y at Capture" "Earth (Helio) z at Capture" "Earth (Helio) vx at Capture" "Earth (Helio) vy at Capture" "Earth (Helio) vz at Capture"])
+
+    transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
+        cluster_data_ini.loc[:, ["Helio x at Capture",
+                                 "Helio y at Capture",
+                                 "Helio z at Capture",
+                                 "Helio vx at Capture",
+                                 "Helio vy at Capture",
+                                 "Helio vz at Capture",
+                                 "Moon (Helio) x at Capture",
+                                 "Moon (Helio) y at Capture",
+                                 "Moon (Helio) z at Capture",
+                                 "Moon (Helio) vx at Capture",
+                                 "Moon (Helio) vy at Capture",
+                                 "Moon (Helio) vz at Capture",
+                                 "Earth (Helio) x at Capture",
+                                 "Earth (Helio) y at Capture",
+                                 "Earth (Helio) z at Capture",
+                                 "Earth (Helio) vx at Capture",
+                                 "Earth (Helio) vy at Capture",
+                                 "Earth (Helio) vz at Capture"]],
+        cluster_data_ini['1 Hill Duration'])
+    pipe = make_pipeline(preprocessing.StandardScaler(), MLPRegressor())
+    pipe.fit(train_X, train_y)
+    print(pipe.score(test_X, test_y))
+    # np.set_printoptions(threshold=np.inf)
+    # print(clf.predict(test_X)[:100])
+    # print(test_y[:100])
+    # print(abs(test_y - clf.predict(test_X)/test_y * 100)[:100])
+    # print(sum(abs(test_y - clf.predict(test_X))) / len(test_y))
+
+
+if __name__ == '__main__':
     # parse_main()
     # feature_selection_main()
 
-    trans, scaled, normed, train, test = preprocessing_main()
-    fuzzy_c_main(train)
+    # trans, scaled, normed, train, test = preprocessing_main()
+    # fuzzy_c_main(train)
+    estimator_tests()
