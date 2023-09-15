@@ -15,6 +15,11 @@ from sklearn import svm
 from sklearn.pipeline import make_pipeline
 import sklearn as sk
 from sklearn.neural_network import MLPRegressor
+from sklearn.kernel_ridge import KernelRidge
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.ensemble import RandomForestClassifier
 
 rx_dict = {
     'Best chromosome': re.compile(r"Best chromosome: \[(?P<bchrome>(\d+ ){17}\d)"),
@@ -131,26 +136,28 @@ def parse_main():
 
 @staticmethod
 def feature_selection_main():
-    file_path = 'cluster_df_pruned.csv'
-    cluster_data = pd.read_csv(file_path, sep=' ', header=0, names=["1 Hill Duration", "Min. Distance",
-                                                                    "Helio x at Capture",
-                                                                    "Helio y at Capture", "Helio z at Capture",
-                                                                    "Helio vx at Capture", "Helio vy at Capture",
-                                                                    "Helio vz at Capture", "Moon (Helio) x at Capture",
-                                                                    "Moon (Helio) y at Capture",
-                                                                    "Moon (Helio) z at Capture",
-                                                                    "Moon (Helio) vx at Capture",
-                                                                    "Moon (Helio) vy at Capture",
-                                                                    "Moon (Helio) vz at Capture",
-                                                                    "Capture Date", "Earth (Helio) x at Capture",
-                                                                    "Earth (Helio) y at Capture",
-                                                                    "Earth (Helio) z at Capture",
-                                                                    "Earth (Helio) vx at Capture",
-                                                                    "Earth (Helio) vy at Capture",
-                                                                    "Earth (Helio) vz at Capture"])
+    file_path = 'cluster_df.csv'
+    cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
+                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
+                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                          "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
+                                          "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
+                                          "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                          "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                          "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
+                                          "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
+                                          "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                          "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
+                                          "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                          "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
+                                          "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
+                                          "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
+                                          "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
 
-    targets = cluster_data.loc[:, ("1 Hill Duration", 'Min. Distance')]
-    features = [cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
+
+    targets = cluster_data_ini.loc[:, ("Retrograde", 'Min. Distance')]
+    features = [cluster_data_ini.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
                                      "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
                                      "Moon (Helio) x at Capture", "Moon (Helio) y at Capture",
                                      "Moon (Helio) z at Capture",
@@ -159,10 +166,10 @@ def feature_selection_main():
                                      "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
                                      "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
                                      "Earth (Helio) vz at Capture")],
-                cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
+                cluster_data_ini.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
                                      "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture", "Capture Date"
                                      )],
-                cluster_data.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
+                cluster_data_ini.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
                                      "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
                                      "Moon (Helio) x at Capture", "Moon (Helio) y at Capture",
                                      "Moon (Helio) z at Capture",
@@ -176,12 +183,12 @@ def feature_selection_main():
     random_state = 42
 
     # Define estimator
-    rf_reg = RandomForestRegressor(n_estimators=250, random_state=random_state)
+    rf_reg = RandomForestClassifier(n_estimators=250, random_state=random_state)
 
     # Load example dataset from Scikit-learn
-    one = 2  # one for 7-element epoch features or 0 for 18-elements state vector based features
+    one = 0  # one for 7-element epoch features or 0 for 18-elements state vector based features
     X = pd.DataFrame(data=features[one])
-    y = pd.Series(data=targets.loc[:, 'Min. Distance'])
+    y = pd.Series(data=targets.loc[:, 'Retrograde'])
 
     # Split into train and test
     train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.10, random_state=random_state)
@@ -200,7 +207,7 @@ def feature_selection_main():
     # Create GeneticSelector instance
     # You should not set the number of cores (n_jobs) in the Scikit-learn
     # model to avoid UserWarning. The genetic selector is already parallelizable.
-    genetic_selector = GeneticSelector(estimator=rf_reg, scoring='neg_root_mean_squared_error', cv=5, n_gen=30,
+    genetic_selector = GeneticSelector(estimator=rf_reg, cv=5, n_gen=10,
                                        population_size=10,
                                        crossover_rate=0.8, mutation_rate=0.15, tournament_k=2,
                                        calc_train_score=True, initial_best_chromosome=best_chromosome, n_jobs=-1,
@@ -366,24 +373,328 @@ def make_set(master, variable, axislabel, ylim):
     # plt.savefig("figures/helvz_3hill.svg", format="svg")
 
 
-def fuzzy_c_main(data):
-    file_path = 'cluster_df_pruned.csv'
-    cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0, names=["1 Hill Duration", "Min. Distance",
-                                                                        "Helio x at Capture", "Helio y at Capture",
-                                                                        "Helio z at Capture", "Helio vx at Capture",
-                                                                        "Helio vy at Capture", "Helio vz at Capture",
-                                                                        "Moon (Helio) x at Capture",
-                                                                        "Moon (Helio) y at Capture",
-                                                                        "Moon (Helio) z at Capture",
-                                                                        "Moon (Helio) vx at Capture",
-                                                                        "Moon (Helio) vy at Capture",
-                                                                        "Moon (Helio) vz at Capture",
-                                                                        "Capture Date", "Earth (Helio) x at Capture",
-                                                                        "Earth (Helio) y at Capture",
-                                                                        "Earth (Helio) z at Capture",
-                                                                        "Earth (Helio) vx at Capture",
-                                                                        "Earth (Helio) vy at Capture",
-                                                                        "Earth (Helio) vz at Capture"])
+@staticmethod
+def make_set2(master):
+    c1_data = master[master['C1 Membership'] > 0.8]
+    c2_data = master[master['C2 Membership'] > 0.8]
+    c3_data = master[master['C3 Membership'] > 0.8]
+    c4_data = master[master['C4 Membership'] > 0.8]
+    c5_data = master[master['C5 Membership'] > 0.8]
+    c6_data = master[master['C6 Membership'] > 0.8]
+    c7_data = master[master['C7 Membership'] > 0.8]
+    c8_data = master[master['C8 Membership'] > 0.8]
+    ['b', 'orange', 'g', 'r', 'c', 'm', 'y', 'k', 'Brown', 'ForestGreen', 'grey', 'b', 'orange', 'g', 'r', 'c',
+     'm', 'y', 'k', 'Brown', 'ForestGreen', 'grey']
+    fig8 = plt.figure()
+    ax1 = plt.subplot(3, 3, 1)
+    ax1.scatter(master['Helio x at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax1.scatter(c1_data['Helio x at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax1.scatter(c2_data['Helio x at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax1.scatter(c3_data['Helio x at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax1.scatter(c4_data['Helio x at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax1.scatter(c5_data['Helio x at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax1.scatter(c6_data['Helio x at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax1.scatter(c7_data['Helio x at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax1.scatter(c8_data['Helio x at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax1.set_xlabel('Helio x at Capture (AU)')
+    ax1.set_ylabel('1 Hill Duration (days)')
+    ax1.set_ylim([0, 2500])
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
+
+    ax2 = plt.subplot(3, 3, 2)
+    ax2.scatter(master['Helio y at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax2.scatter(c1_data['Helio y at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax2.scatter(c2_data['Helio y at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax2.scatter(c3_data['Helio y at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax2.scatter(c4_data['Helio y at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax2.scatter(c5_data['Helio y at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax2.scatter(c6_data['Helio y at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax2.scatter(c7_data['Helio y at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax2.scatter(c8_data['Helio y at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax2.set_xlabel('Helio y at Capture (AU)')
+    ax2.set_ylabel('1 Hill Duration (days)')
+    ax2.set_ylim([0, 2500])
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(3, 3, 3)
+    ax3.scatter(master['Helio z at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax3.scatter(c1_data['Helio z at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax3.scatter(c2_data['Helio z at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax3.scatter(c3_data['Helio z at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax3.scatter(c4_data['Helio z at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax3.scatter(c5_data['Helio z at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax3.scatter(c6_data['Helio z at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax3.scatter(c7_data['Helio z at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax3.scatter(c8_data['Helio z at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax3.set_xlabel('Helio z at Capture (AU)')
+    ax3.set_ylabel('1 Hill Duration (days)')
+    ax3.set_ylim([0, 2500])
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(3, 3, 4)
+    ax4.scatter(master['Helio vx at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax4.scatter(c1_data['Helio vx at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax4.scatter(c2_data['Helio vx at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax4.scatter(c3_data['Helio vx at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax4.scatter(c4_data['Helio vx at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax4.scatter(c5_data['Helio vx at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax4.scatter(c6_data['Helio vx at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax4.scatter(c7_data['Helio vx at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax4.scatter(c8_data['Helio vx at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax4.set_xlabel('Helio vx at Capture (AU/day)')
+    ax4.set_ylabel('1 Hill Duration (days)')
+    ax4.set_ylim([0, 2500])
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(3, 3, 5)
+    ax5.scatter(master['Helio vy at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax5.scatter(c1_data['Helio vy at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax5.scatter(c2_data['Helio vy at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax5.scatter(c3_data['Helio vy at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax5.scatter(c4_data['Helio vy at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax5.scatter(c5_data['Helio vy at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax5.scatter(c6_data['Helio vy at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax5.scatter(c7_data['Helio vy at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax5.scatter(c8_data['Helio vy at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax5.set_xlabel('Helio vy at Capture (AU/day)')
+    ax5.set_ylabel('1 Hill Duration (days)')
+    ax5.set_ylim([0, 2500])
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(3, 3, 6)
+    ax6.scatter(master['Helio vz at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax6.scatter(c1_data['Helio vz at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax6.scatter(c2_data['Helio vz at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax6.scatter(c3_data['Helio vz at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax6.scatter(c4_data['Helio vz at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax6.scatter(c5_data['Helio vz at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax6.scatter(c6_data['Helio vz at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax6.scatter(c7_data['Helio vz at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax6.scatter(c8_data['Helio vz at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax6.set_xlabel('Helio vz at Capture (AU/day)')
+    ax6.set_ylabel('1 Hill Duration (days)')
+    ax6.set_ylim([0, 2500])
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+
+    ax7 = plt.subplot(3, 3, 7)
+    ax7 = plt.subplot(3, 3, 1)
+    ax7.scatter(master['Capture Date'], master['1 Hill Duration'], s=0.1, color='b')
+    ax7.scatter(c1_data['Capture Date'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax7.scatter(c2_data['Capture Date'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax7.scatter(c3_data['Capture Date'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax7.scatter(c4_data['Capture Date'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax7.scatter(c5_data['Capture Date'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax7.scatter(c6_data['Capture Date'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax7.scatter(c7_data['Capture Date'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax7.scatter(c8_data['Capture Date'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax7.set_xlabel('Capture Date (JD)')
+    ax7.set_ylabel('1 Hill Duration (days)')
+    ax7.set_ylim([0, 2500])
+
+    fig8 = plt.figure()
+    ax1 = plt.subplot(2, 3, 1)
+    ax1.scatter(master['Moon (Helio) x at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax1.scatter(c1_data['Moon (Helio) x at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax1.scatter(c2_data['Moon (Helio) x at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax1.scatter(c3_data['Moon (Helio) x at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax1.scatter(c4_data['Moon (Helio) x at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax1.scatter(c5_data['Moon (Helio) x at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax1.scatter(c6_data['Moon (Helio) x at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax1.scatter(c7_data['Moon (Helio) x at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax1.scatter(c8_data['Moon (Helio) x at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax1.set_xlabel('Moon (Helio) x at Capture (AU)')
+    ax1.set_ylabel('1 Hill Duration (days)')
+    ax1.set_ylim([0, 2500])
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
+
+    ax2 = plt.subplot(2, 3, 2)
+    ax2.scatter(master['Moon (Helio) y at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax2.scatter(c1_data['Moon (Helio) y at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax2.scatter(c2_data['Moon (Helio) y at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax2.scatter(c3_data['Moon (Helio) y at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax2.scatter(c4_data['Moon (Helio) y at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax2.scatter(c5_data['Moon (Helio) y at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax2.scatter(c6_data['Moon (Helio) y at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax2.scatter(c7_data['Moon (Helio) y at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax2.scatter(c8_data['Moon (Helio) y at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax2.set_xlabel('Moon (Helio) y at Capture (AU)')
+    ax2.set_ylabel('1 Hill Duration (days)')
+    ax2.set_ylim([0, 2500])
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(2, 3, 3)
+    ax3.scatter(master['Moon (Helio) z at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax3.scatter(c1_data['Moon (Helio) z at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax3.scatter(c2_data['Moon (Helio) z at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax3.scatter(c3_data['Moon (Helio) z at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax3.scatter(c4_data['Moon (Helio) z at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax3.scatter(c5_data['Moon (Helio) z at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax3.scatter(c6_data['Moon (Helio) z at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax3.scatter(c7_data['Moon (Helio) z at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax3.scatter(c8_data['Moon (Helio) z at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax3.set_xlabel('Moon (Helio) z at Capture (AU)')
+    ax3.set_ylabel('1 Hill Duration (days)')
+    ax3.set_ylim([0, 2500])
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(2, 3, 4)
+    ax4.scatter(master['Moon (Helio) vx at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax4.scatter(c1_data['Moon (Helio) vx at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax4.scatter(c2_data['Moon (Helio) vx at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax4.scatter(c3_data['Moon (Helio) vx at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax4.scatter(c4_data['Moon (Helio) vx at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax4.scatter(c5_data['Moon (Helio) vx at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax4.scatter(c6_data['Moon (Helio) vx at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax4.scatter(c7_data['Moon (Helio) vx at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax4.scatter(c8_data['Moon (Helio) vx at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax4.set_xlabel('Moon (Helio) vx at Capture (AU/day)')
+    ax4.set_ylabel('1 Hill Duration (days)')
+    ax4.set_ylim([0, 2500])
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(2, 3, 5)
+    ax5.scatter(master['Moon (Helio) vy at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax5.scatter(c1_data['Moon (Helio) vy at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax5.scatter(c2_data['Moon (Helio) vy at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax5.scatter(c3_data['Moon (Helio) vy at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax5.scatter(c4_data['Moon (Helio) vy at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax5.scatter(c5_data['Moon (Helio) vy at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax5.scatter(c6_data['Moon (Helio) vy at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax5.scatter(c7_data['Moon (Helio) vy at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax5.scatter(c8_data['Moon (Helio) vy at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax5.set_xlabel('Moon (Helio) vy at Capture (AU/day)')
+    ax5.set_ylabel('1 Hill Duration (days)')
+    ax5.set_ylim([0, 2500])
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(2, 3, 6)
+    ax6.scatter(master['Moon (Helio) vz at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax6.scatter(c1_data['Moon (Helio) vz at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax6.scatter(c2_data['Moon (Helio) vz at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax6.scatter(c3_data['Moon (Helio) vz at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax6.scatter(c4_data['Moon (Helio) vz at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax6.scatter(c5_data['Moon (Helio) vz at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax6.scatter(c6_data['Moon (Helio) vz at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax6.scatter(c7_data['Moon (Helio) vz at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax6.scatter(c8_data['Moon (Helio) vz at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax6.set_xlabel('Moon (Helio) vz at Capture (AU/day)')
+    ax6.set_ylabel('1 Hill Duration (days)')
+    ax6.set_ylim([0, 2500])
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+
+    fig8 = plt.figure()
+    ax1 = plt.subplot(2, 3, 1)
+    ax1.scatter(master['Earth (Helio) x at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax1.scatter(c1_data['Earth (Helio) x at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax1.scatter(c2_data['Earth (Helio) x at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax1.scatter(c3_data['Earth (Helio) x at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax1.scatter(c4_data['Earth (Helio) x at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax1.scatter(c5_data['Earth (Helio) x at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax1.scatter(c6_data['Earth (Helio) x at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax1.scatter(c7_data['Earth (Helio) x at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax1.scatter(c8_data['Earth (Helio) x at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax1.set_xlabel('Earth (Helio) x at Capture (AU)')
+    ax1.set_ylabel('1 Hill Duration (days)')
+    ax1.set_ylim([0, 2500])
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
+
+    ax2 = plt.subplot(2, 3, 2)
+    ax2.scatter(master['Earth (Helio) y at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax2.scatter(c1_data['Earth (Helio) y at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax2.scatter(c2_data['Earth (Helio) y at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax2.scatter(c3_data['Earth (Helio) y at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax2.scatter(c4_data['Earth (Helio) y at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax2.scatter(c5_data['Earth (Helio) y at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax2.scatter(c6_data['Earth (Helio) y at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax2.scatter(c7_data['Earth (Helio) y at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax2.scatter(c8_data['Earth (Helio) y at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax2.set_xlabel('Earth (Helio) y at Capture (AU)')
+    ax2.set_ylabel('1 Hill Duration (days)')
+    ax2.set_ylim([0, 2500])
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(2, 3, 3)
+    ax3.scatter(master['Earth (Helio) z at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax3.scatter(c1_data['Earth (Helio) z at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax3.scatter(c2_data['Earth (Helio) z at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax3.scatter(c3_data['Earth (Helio) z at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax3.scatter(c4_data['Earth (Helio) z at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax3.scatter(c5_data['Earth (Helio) z at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax3.scatter(c6_data['Earth (Helio) z at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax3.scatter(c7_data['Earth (Helio) z at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax3.scatter(c8_data['Earth (Helio) z at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax3.set_xlabel('Earth (Helio) z at Capture (AU)')
+    ax3.set_ylabel('1 Hill Duration (days)')
+    ax3.set_ylim([0, 2500])
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(2, 3, 4)
+    ax4.scatter(master['Earth (Helio) vx at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax4.scatter(c1_data['Earth (Helio) vx at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax4.scatter(c2_data['Earth (Helio) vx at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax4.scatter(c3_data['Earth (Helio) vx at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax4.scatter(c4_data['Earth (Helio) vx at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax4.scatter(c5_data['Earth (Helio) vx at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax4.scatter(c6_data['Earth (Helio) vx at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax4.scatter(c7_data['Earth (Helio) vx at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax4.scatter(c8_data['Earth (Helio) vx at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax4.set_xlabel('Earth (Helio) vx at Capture (AU/day)')
+    ax4.set_ylabel('1 Hill Duration (days)')
+    ax4.set_ylim([0, 2500])
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(2, 3, 5)
+    ax5.scatter(master['Earth (Helio) vy at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax5.scatter(c1_data['Earth (Helio) vy at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax5.scatter(c2_data['Earth (Helio) vy at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax5.scatter(c3_data['Earth (Helio) vy at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax5.scatter(c4_data['Earth (Helio) vy at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax5.scatter(c5_data['Earth (Helio) vy at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax5.scatter(c6_data['Earth (Helio) vy at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax5.scatter(c7_data['Earth (Helio) vy at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax5.scatter(c8_data['Earth (Helio) vy at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax5.set_xlabel('Earth (Helio) vy at Capture (AU/day)')
+    ax5.set_ylabel('1 Hill Duration (days)')
+    ax5.set_ylim([0, 2500])
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(2, 3, 6)
+    ax6.scatter(master['Earth (Helio) vz at Capture'], master['1 Hill Duration'], s=0.1, color='b')
+    ax6.scatter(c1_data['Earth (Helio) vz at Capture'], c1_data['1 Hill Duration'], s=0.5, color='orange')
+    ax6.scatter(c2_data['Earth (Helio) vz at Capture'], c2_data['1 Hill Duration'], s=0.5, color='g')
+    ax6.scatter(c3_data['Earth (Helio) vz at Capture'], c3_data['1 Hill Duration'], s=0.5, color='r')
+    ax6.scatter(c4_data['Earth (Helio) vz at Capture'], c4_data['1 Hill Duration'], s=0.5, color='Brown')
+    ax6.scatter(c5_data['Earth (Helio) vz at Capture'], c5_data['1 Hill Duration'], s=0.5, color='m')
+    ax6.scatter(c6_data['Earth (Helio) vz at Capture'], c6_data['1 Hill Duration'], s=0.5, color='y')
+    ax6.scatter(c7_data['Earth (Helio) vz at Capture'], c7_data['1 Hill Duration'], s=0.5, color='k')
+    ax6.scatter(c8_data['Earth (Helio) vz at Capture'], c8_data['1 Hill Duration'], s=0.5, color='grey')
+    ax6.set_xlabel('Earth (Helio) vz at Capture (AU/day)')
+    ax6.set_ylabel('1 Hill Duration (days)')
+    ax6.set_ylim([0, 2500])
+    plt.show()
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+    return
+
+
+def fuzzy_c_main():
+    file_path = 'cluster_df.csv'
+    cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
+                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
+                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                          "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
+                                          "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
+                                          "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                          "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                          "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
+                                          "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
+                                          "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                          "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
+                                          "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                          "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
+                                          "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
+                                          "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
+                                          "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
 
     # make_set(cluster_data_ini, cluster_data_ini['1 Hill Duration'], '1 Hill Duration', [0, 400])
     # make_set(cluster_data_ini, cluster_data_ini['Min. Distance'], 'Min. Distance', [0, 0.01])
@@ -391,61 +702,76 @@ def fuzzy_c_main(data):
     colors = ['b', 'orange', 'g', 'r', 'c', 'm', 'y', 'k', 'Brown', 'ForestGreen', 'grey', 'b', 'orange', 'g', 'r', 'c',
               'm', 'y', 'k', 'Brown', 'ForestGreen', 'grey']
 
+    ncenters = 8
+    cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(np.array([cluster_data_ini['1 Hill Duration'].to_numpy()]),
+                                                     ncenters, 2, error=0.005, maxiter=5000, init=None)
+
+    cluster_data_ini['C1 Membership'] = u[0, :]
+    cluster_data_ini['C2 Membership'] = u[1, :]
+    cluster_data_ini['C3 Membership'] = u[2, :]
+    cluster_data_ini['C4 Membership'] = u[3, :]
+    cluster_data_ini['C5 Membership'] = u[4, :]
+    cluster_data_ini['C6 Membership'] = u[5, :]
+    cluster_data_ini['C7 Membership'] = u[6, :]
+    cluster_data_ini['C8 Membership'] = u[7, :]
+
+    make_set2(master=cluster_data_ini)
+
     # determining the optimal number of clusters
-    fpcs = []
-    for ncenters in range(2, 15):
-        print(ncenters)
-        cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-            np.array([cluster_data_ini['1 Hill Duration'].to_numpy()]), ncenters, 2, error=0.005, maxiter=5000,
-            init=None)
+    # fpcs = []
+    # for ncenters in range(2, 15):
+    #     print(ncenters)
+    #     cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+    #         np.array([cluster_data_ini['1 Hill Duration'].to_numpy()]), ncenters, 2, error=0.005, maxiter=5000,
+    #         init=None)
 
-        # highest cluster membership
-        cluster_membership = np.argmax(u, axis=0)
+    # highest cluster membership
+    # cluster_membership = np.argmax(u, axis=0)
 
-        fig = plt.figure()
-        for j in range(ncenters):
-            plt.scatter(cluster_data_ini['1 Hill Duration'], u[j, :], color=colors[j], s=1, label='Cluster: ' + str(j))
-            plt.xlabel('1 Hill Duration')
-            plt.ylabel('Memebership')
-            plt.legend()
+    # fig = plt.figure()
+    # for j in range(ncenters):
+    #     plt.scatter(cluster_data_ini['1 Hill Duration'], u[j, :], color=colors[j], s=1, label='Cluster: ' + str(j))
+    #     plt.xlabel('1 Hill Duration')
+    #     plt.ylabel('Memebership')
+    #     plt.legend()
 
-        # fig, ax = plt.subplots()
-        # for j in range(ncenters):
-        # Set the bin size
-        # bin_size = 5
-        # pts = cluster_data_ini['1 Hill Duration'].iloc[cluster_membership == j]
-        # Calculate the number of bins based on data range and bin size
-        # data_range = max(pts) - min(pts)
-        # num_bins = int(data_range / bin_size)
-        # plt.hist(pts, color=colors[j], bins=num_bins)
-        # plt.xlim([0, 2500])
-        # plt.title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
-        # plt.xlabel('1 Hill Duration (days)')
-        # plt.ylabel('Count')
+    # fig, ax = plt.subplots()
+    # for j in range(ncenters):
+    # Set the bin size
+    # bin_size = 5
+    # pts = cluster_data_ini['1 Hill Duration'].iloc[cluster_membership == j]
+    # Calculate the number of bins based on data range and bin size
+    # data_range = max(pts) - min(pts)
+    # num_bins = int(data_range / bin_size)
+    # plt.hist(pts, color=colors[j], bins=num_bins)
+    # plt.xlim([0, 2500])
+    # plt.title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
+    # plt.xlabel('1 Hill Duration (days)')
+    # plt.ylabel('Count')
 
-        # fig1, axes1 = plt.subplots(figsize=(5, 5))
-        # xpts = data[:, 0]
-        # ypts = data[:, 1]
+    # fig1, axes1 = plt.subplots(figsize=(5, 5))
+    # xpts = data[:, 0]
+    # ypts = data[:, 1]
 
-        # for j in range(ncenters):
-        #     axes1.plot(xpts[cluster_membership == j], ypts[cluster_membership == j], '.', markersize=0.5, color=colors[j])
+    # for j in range(ncenters):
+    #     axes1.plot(xpts[cluster_membership == j], ypts[cluster_membership == j], '.', markersize=0.5, color=colors[j])
 
-        # Mark the center of each fuzzy cluster
-        # for pt in cntr:
-        #     axes1.plot(pt[0], pt[1], 'rs')
-        #
-        # axes1.set_title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
-        # fig1.tight_layout()
+    # Mark the center of each fuzzy cluster
+    # for pt in cntr:
+    #     axes1.plot(pt[0], pt[1], 'rs')
+    #
+    # axes1.set_title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
+    # fig1.tight_layout()
 
-        # Store fpc values for later
-        fpcs.append(fpc)
-        # plt.show()
-    print(fpcs)
-    fig = plt.figure()
-    plt.plot(np.linspace(2, 14, len(fpcs)), fpcs)
-    plt.xlabel('Number of Clusters')
-    plt.ylabel('Fuzzy Partition Index')
-    plt.show()
+    # Store fpc values for later
+    # fpcs.append(fpc)
+    # plt.show()
+    # print(fpcs)
+    # fig = plt.figure()
+    # plt.plot(np.linspace(2, 14, len(fpcs)), fpcs)
+    # plt.xlabel('Number of Clusters')
+    # plt.ylabel('Fuzzy Partition Index')
+    # plt.show()
 
     # for prediction
     # cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
@@ -631,33 +957,93 @@ def OPTICS_main(cluster_data_train, cluster_data_trans):
 
 
 def estimator_tests():
-    file_path = 'cluster_df_pruned.csv'
+    file_path = 'cluster_df.csv'
     cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
-                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',                                          'STC',                                          "Became Minimoon", "3 Hill Duration", "Helio x at Capture", "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture", "Moon (Helio) y at Capture", "Moon (Helio) z at Capture", "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture", "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS", "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS", "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)", "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)", "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)", "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)", "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)" "Entry Date to EMS" "Earth (Helio) x at Capture" "Earth (Helio) y at Capture" "Earth (Helio) z at Capture" "Earth (Helio) vx at Capture" "Earth (Helio) vy at Capture" "Earth (Helio) vz at Capture"])
+                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
+                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                          "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
+                                          "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
+                                          "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                          "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                          "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
+                                          "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
+                                          "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                          "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
+                                          "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                          "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
+                                          "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
+                                          "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
+                                          "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
+
 
     transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
-        cluster_data_ini.loc[:, ["Helio x at Capture",
-                                 "Helio y at Capture",
-                                 "Helio z at Capture",
-                                 "Helio vx at Capture",
-                                 "Helio vy at Capture",
-                                 "Helio vz at Capture",
-                                 "Moon (Helio) x at Capture",
-                                 "Moon (Helio) y at Capture",
-                                 "Moon (Helio) z at Capture",
-                                 "Moon (Helio) vx at Capture",
-                                 "Moon (Helio) vy at Capture",
-                                 "Moon (Helio) vz at Capture",
-                                 "Earth (Helio) x at Capture",
-                                 "Earth (Helio) y at Capture",
-                                 "Earth (Helio) z at Capture",
-                                 "Earth (Helio) vx at Capture",
-                                 "Earth (Helio) vy at Capture",
-                                 "Earth (Helio) vz at Capture"]],
-        cluster_data_ini['1 Hill Duration'])
-    pipe = make_pipeline(preprocessing.StandardScaler(), MLPRegressor())
+            cluster_data_ini.loc[:, ["Helio x at Capture",
+                                     "Helio y at Capture",
+                                     "Helio z at Capture",
+                                     "Helio vx at Capture",
+                                     "Helio vy at Capture",
+                                     "Helio vz at Capture",
+                                     "Moon (Helio) x at Capture",
+                                     "Moon (Helio) y at Capture",
+                                     "Moon (Helio) z at Capture",
+                                     "Moon (Helio) vx at Capture",
+                                     "Moon (Helio) vy at Capture",
+                                     "Moon (Helio) vz at Capture",
+                                     "Earth (Helio) x at Capture",
+                                     "Earth (Helio) y at Capture",
+                                     "Earth (Helio) z at Capture",
+                                     "Earth (Helio) vx at Capture",
+                                     "Earth (Helio) vy at Capture",
+                                     "Earth (Helio) vz at Capture"]],
+            cluster_data_ini['Retrograde'])
+
+    pipe = make_pipeline(preprocessing.StandardScaler(), RandomForestClassifier())
     pipe.fit(train_X, train_y)
     print(pipe.score(test_X, test_y))
+
+    pipe = make_pipeline(RandomForestClassifier())
+    pipe.fit(train_X, train_y)
+    print(pipe.score(test_X, test_y))
+
+    pipe4 = make_pipeline(preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+                          RandomForestClassifier())
+    pipe4.fit(train_X, train_y)
+    print(pipe4.score(test_X, test_y))
+
+    # pipe = make_pipeline(preprocessing.StandardScaler(), MLPRegressor())
+    # pipe.fit(train_X, train_y)
+    # print(pipe.score(test_X, test_y))
+    #
+    # pipe2 = make_pipeline(MLPRegressor())
+    # pipe2.fit(preprocessing.normalize(train_X), train_y)
+    # print(pipe2.score(preprocessing.normalize(test_X), test_y))
+    #
+    # pipe3 = make_pipeline(MLPRegressor())
+    # pipe3.fit(train_X, train_y)
+    # print(pipe3.score(test_X, test_y))
+    #
+    # pipe4 = make_pipeline(preprocessing.QuantileTransformer(output_distribution='normal', random_state=0), MLPRegressor())
+    # pipe4.fit(train_X, train_y)
+    # print(pipe4.score(test_X, test_y))
+    #
+    # pipe = make_pipeline(preprocessing.StandardScaler(), RandomForestRegressor())
+    # pipe.fit(train_X, train_y)
+    # print(pipe.score(test_X, test_y))
+    #
+    # pipe2 = make_pipeline(RandomForestRegressor())
+    # pipe2.fit(preprocessing.normalize(train_X), train_y)
+    # print(pipe2.score(preprocessing.normalize(test_X), test_y))
+    #
+    # pipe3 = make_pipeline(RandomForestRegressor())
+    # pipe3.fit(train_X, train_y)
+    # print(pipe3.score(test_X, test_y))
+    #
+    # pipe4 = make_pipeline(preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+    #                       RandomForestRegressor())
+    # pipe4.fit(train_X, train_y)
+    # print(pipe4.score(test_X, test_y))
+
     # np.set_printoptions(threshold=np.inf)
     # print(clf.predict(test_X)[:100])
     # print(test_y[:100])
@@ -667,8 +1053,8 @@ def estimator_tests():
 
 if __name__ == '__main__':
     # parse_main()
-    # feature_selection_main()
+    feature_selection_main()
 
     # trans, scaled, normed, train, test = preprocessing_main()
-    # fuzzy_c_main(train)
-    estimator_tests()
+    # fuzzy_c_main()
+    # estimator_tests()
