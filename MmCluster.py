@@ -13,6 +13,7 @@ from sklearn import preprocessing
 import matplotlib.gridspec as gridspec
 from sklearn import svm
 from sklearn.pipeline import make_pipeline
+import multiprocessing
 import sklearn as sk
 from sklearn.neural_network import MLPRegressor
 from sklearn.kernel_ridge import KernelRidge
@@ -155,29 +156,29 @@ def feature_selection_main():
                                           "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
                                           "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
 
-
     targets = cluster_data_ini.loc[:, ("Retrograde", 'Min. Distance')]
     features = [cluster_data_ini.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
-                                     "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
-                                     "Moon (Helio) x at Capture", "Moon (Helio) y at Capture",
-                                     "Moon (Helio) z at Capture",
-                                     "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
-                                     "Moon (Helio) vz at Capture", "Earth (Helio) x at Capture",
-                                     "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
-                                     "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
-                                     "Earth (Helio) vz at Capture")],
+                                         "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
+                                         "Moon (Helio) x at Capture", "Moon (Helio) y at Capture",
+                                         "Moon (Helio) z at Capture",
+                                         "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                         "Moon (Helio) vz at Capture", "Earth (Helio) x at Capture",
+                                         "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
+                                         "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
+                                         "Earth (Helio) vz at Capture")],
                 cluster_data_ini.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
-                                     "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture", "Capture Date"
-                                     )],
+                                         "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
+                                         "Capture Date"
+                                         )],
                 cluster_data_ini.loc[:, ("Helio x at Capture", "Helio y at Capture", "Helio z at Capture",
-                                     "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
-                                     "Moon (Helio) x at Capture", "Moon (Helio) y at Capture",
-                                     "Moon (Helio) z at Capture",
-                                     "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
-                                     "Moon (Helio) vz at Capture", "Earth (Helio) x at Capture",
-                                     "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
-                                     "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
-                                     "Earth (Helio) vz at Capture", "Capture Date")]]
+                                         "Helio vx at Capture", "Helio vy at Capture", "Helio vz at Capture",
+                                         "Moon (Helio) x at Capture", "Moon (Helio) y at Capture",
+                                         "Moon (Helio) z at Capture",
+                                         "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                         "Moon (Helio) vz at Capture", "Earth (Helio) x at Capture",
+                                         "Earth (Helio) y at Capture", "Earth (Helio) z at Capture",
+                                         "Earth (Helio) vx at Capture", "Earth (Helio) vy at Capture",
+                                         "Earth (Helio) vz at Capture", "Capture Date")]]
 
     # Set random state
     random_state = 42
@@ -477,7 +478,6 @@ def make_set2(master):
     # plt.savefig("figures/helvz_3hill.svg", format="svg")
 
     ax7 = plt.subplot(3, 3, 7)
-    ax7 = plt.subplot(3, 3, 1)
     ax7.scatter(master['Capture Date'], master['1 Hill Duration'], s=0.1, color='b')
     ax7.scatter(c1_data['Capture Date'], c1_data['1 Hill Duration'], s=0.5, color='orange')
     ax7.scatter(c2_data['Capture Date'], c2_data['1 Hill Duration'], s=0.5, color='g')
@@ -676,6 +676,284 @@ def make_set2(master):
     return
 
 
+@staticmethod
+def make_set3(master):
+    retrograde_pop = master[master['Retrograde'] == 1]
+    prograde_pop = master[master['Retrograde'] == 0]
+
+    fig8 = plt.figure()
+    bin_size = 0.01
+    retro_pts = retrograde_pop['Helio x at Capture']
+    pro_pts = prograde_pop['Helio x at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.01
+    retro_pts = retrograde_pop['Helio y at Capture']
+    pro_pts = prograde_pop['Helio y at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.0001
+    retro_pts = retrograde_pop['Helio z at Capture']
+    pro_pts = prograde_pop['Helio z at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.0001
+    retro_pts = retrograde_pop['Helio vx at Capture']
+    pro_pts = prograde_pop['Helio vx at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.0001
+    retro_pts = retrograde_pop['Helio vy at Capture']
+    pro_pts = prograde_pop['Helio vy at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.000001
+    retro_pts = retrograde_pop['Helio vz at Capture']
+    pro_pts = prograde_pop['Helio vz at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.01
+    retro_pts = retrograde_pop['Moon (Helio) x at Capture']
+    pro_pts = prograde_pop['Moon (Helio) x at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+    fig8 = plt.figure()
+    bin_size = 0.01
+    retro_pts = retrograde_pop['Moon (Helio) y at Capture']
+    pro_pts = prograde_pop['Moon (Helio) y at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+    fig8 = plt.figure()
+    bin_size = 0.00001
+    retro_pts = retrograde_pop['Moon (Helio) z at Capture']
+    pro_pts = prograde_pop['Moon (Helio) z at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.00001
+    retro_pts = retrograde_pop['Moon (Helio) vx at Capture']
+    pro_pts = prograde_pop['Moon (Helio) vx at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.00001
+    retro_pts = retrograde_pop['Moon (Helio) vy at Capture']
+    pro_pts = prograde_pop['Moon (Helio) vy at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.0000001
+    retro_pts = retrograde_pop['Moon (Helio) vz at Capture']
+    pro_pts = prograde_pop['Moon (Helio) vz at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.01
+    retro_pts = retrograde_pop['Earth (Helio) x at Capture']
+    pro_pts = prograde_pop['Earth (Helio) x at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+    fig8 = plt.figure()
+    bin_size = 0.01
+    retro_pts = retrograde_pop['Earth (Helio) y at Capture']
+    pro_pts = prograde_pop['Earth (Helio) y at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+    fig8 = plt.figure()
+    bin_size = 0.00001
+    retro_pts = retrograde_pop['Earth (Helio) z at Capture']
+    pro_pts = prograde_pop['Earth (Helio) z at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.00001
+    retro_pts = retrograde_pop['Earth (Helio) vx at Capture']
+    pro_pts = prograde_pop['Earth (Helio) vx at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.00001
+    retro_pts = retrograde_pop['Earth (Helio) vy at Capture']
+    pro_pts = prograde_pop['Earth (Helio) vy at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+
+    fig8 = plt.figure()
+    bin_size = 0.0000001
+    retro_pts = retrograde_pop['Earth (Helio) vz at Capture']
+    pro_pts = prograde_pop['Earth (Helio) vz at Capture']
+    # Calculate the number of bins based on data range and bin size
+    retro_data_range = max(retro_pts) - min(retro_pts)
+    pro_data_range = max(pro_pts) - min(pro_pts)
+    retro_num_bins = int(retro_data_range / bin_size)
+    pro_num_bins = int(pro_data_range / bin_size)
+    plt.hist(retro_pts, bins=retro_num_bins)
+    plt.hist(pro_pts, bins=pro_num_bins)
+    plt.show()
+    return
+
+
+def eci_ecliptic_to_sunearth_synodic(object_id):
+    """
+    This function transforms coordinates from the ECI ecliptic plane to an Earth-centered Sun-Earth co-rotating frame,
+    also referred to as a synodic frame
+    :param sun_eph: the ephemeris x, y, z of the sun with respect to the ECI ecliptic frame 3 x n
+    :param obj_xyz: the position of the object in the ECI ecliptic frame 3 x n
+    :return: The transformed x, y, z coordinates 3 x n
+    """
+
+    file_path = 'cluster_df.csv'
+    master = pd.read_csv(file_path, sep=' ', header=0,
+                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
+                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                          "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
+                                          "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
+                                          "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                          "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                          "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
+                                          "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
+                                          "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                          "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
+                                          "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                          "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
+                                          "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
+                                          "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
+                                          "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
+
+    obj_xyz = master[master['Object id'] == object_id].loc[:, ['Helio x at Capture', 'Helio y at Capture',
+              'Helio z at Capture']].to_numpy().reshape(3,)
+    obj_vxyz = master[master['Object id'] == object_id].loc[:, ['Helio vx at Capture', 'Helio vy at Capture',
+               'Helio vz at Capture']].to_numpy().reshape(3,)
+    moon_xyz = master[master['Object id'] == object_id].loc[:, ['Moon (Helio) x at Capture', 'Moon (Helio) y at Capture',
+               'Moon (Helio) z at Capture']].to_numpy().reshape(3,)
+    moon_vxyz = master[master['Object id'] == object_id].loc[:, ['Moon (Helio) vx at Capture',
+                'Moon (Helio) vy at Capture', 'Moon (Helio) vz at Capture']].to_numpy().reshape(3,)
+    earth_xyz = master[master['Object id'] == object_id].loc[:, ['Earth (Helio) x at Capture',
+                'Earth (Helio) y at Capture', 'Earth (Helio) z at Capture']].to_numpy().reshape(3,)
+    earth_vxyz = master[master['Object id'] == object_id].loc[:, ['Earth (Helio) vx at Capture',
+                 'Earth (Helio) vy at Capture', 'Earth (Helio) vz at Capture']].to_numpy().reshape(3,)
+
+    u_s = (- earth_xyz / np.linalg.norm(earth_xyz))
+    theta = np.arctan2(u_s[1], u_s[0])
+
+    # Rotation matrix - about z
+    Rz_theta = np.array([[np.cos(theta), -np.sin(theta), 0.], [np.sin(theta), np.cos(theta), 0.], [0., 0., 1.]])
+
+    omega = np.cross(earth_xyz, earth_vxyz) / np.linalg.norm(earth_xyz) ** 2
+
+    t_obj_xyz = Rz_theta.T @ obj_xyz
+    t_moon_xyz = np.matmul(Rz_theta.T, obj_xyz)
+    v_obj_xyz = Rz_theta.T @ (obj_vxyz - earth_vxyz) - np.cross(Rz_theta.T @ omega, t_obj_xyz)
+    v_moon_xyz = Rz_theta.T @ (moon_vxyz - earth_vxyz) - np.cross(Rz_theta.T @ omega, t_moon_xyz)
+    ans = np.reshape([t_obj_xyz, t_moon_xyz, v_obj_xyz, v_moon_xyz], (12,))
+    # print(ans)
+    return ans
+
+
 def fuzzy_c_main():
     file_path = 'cluster_df.csv'
     cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
@@ -715,6 +993,7 @@ def fuzzy_c_main():
     cluster_data_ini['C7 Membership'] = u[6, :]
     cluster_data_ini['C8 Membership'] = u[7, :]
 
+    make_set3(master=cluster_data_ini)
     make_set2(master=cluster_data_ini)
 
     # determining the optimal number of clusters
@@ -976,27 +1255,26 @@ def estimator_tests():
                                           "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
                                           "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
 
-
     transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
-            cluster_data_ini.loc[:, ["Helio x at Capture",
-                                     "Helio y at Capture",
-                                     "Helio z at Capture",
-                                     "Helio vx at Capture",
-                                     "Helio vy at Capture",
-                                     "Helio vz at Capture",
-                                     "Moon (Helio) x at Capture",
-                                     "Moon (Helio) y at Capture",
-                                     "Moon (Helio) z at Capture",
-                                     "Moon (Helio) vx at Capture",
-                                     "Moon (Helio) vy at Capture",
-                                     "Moon (Helio) vz at Capture",
-                                     "Earth (Helio) x at Capture",
-                                     "Earth (Helio) y at Capture",
-                                     "Earth (Helio) z at Capture",
-                                     "Earth (Helio) vx at Capture",
-                                     "Earth (Helio) vy at Capture",
-                                     "Earth (Helio) vz at Capture"]],
-            cluster_data_ini['Retrograde'])
+        cluster_data_ini.loc[:, ["Helio x at Capture",
+                                 "Helio y at Capture",
+                                 "Helio z at Capture",
+                                 "Helio vx at Capture",
+                                 "Helio vy at Capture",
+                                 "Helio vz at Capture",
+                                 "Moon (Helio) x at Capture",
+                                 "Moon (Helio) y at Capture",
+                                 "Moon (Helio) z at Capture",
+                                 "Moon (Helio) vx at Capture",
+                                 "Moon (Helio) vy at Capture",
+                                 "Moon (Helio) vz at Capture",
+                                 "Earth (Helio) x at Capture",
+                                 "Earth (Helio) y at Capture",
+                                 "Earth (Helio) z at Capture",
+                                 "Earth (Helio) vx at Capture",
+                                 "Earth (Helio) vy at Capture",
+                                 "Earth (Helio) vz at Capture"]],
+        cluster_data_ini['Retrograde'])
 
     pipe = make_pipeline(preprocessing.StandardScaler(), RandomForestClassifier())
     pipe.fit(train_X, train_y)
@@ -1050,11 +1328,54 @@ def estimator_tests():
     # print(abs(test_y - clf.predict(test_X)/test_y * 100)[:100])
     # print(sum(abs(test_y - clf.predict(test_X))) / len(test_y))
 
+@staticmethod
+def synodic_main():
+    file_path = 'cluster_df.csv'
+    cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
+                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
+                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                          "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
+                                          "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
+                                          "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                          "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                          "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
+                                          "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
+                                          "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                          "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
+                                          "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                          "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
+                                          "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
+                                          "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
+                                          "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
+
+
+    res = eci_ecliptic_to_sunearth_synodic(cluster_data_ini['Object id'].iloc[0])
+    pool = multiprocessing.Pool()
+    res = pool.map(eci_ecliptic_to_sunearth_synodic, cluster_data_ini['Object id'])  # input your function
+    pool.close()
+    res2 = np.array(res)
+    cluster_data_ini['Synodic x at Capture'] = res2[:, 0]
+    cluster_data_ini['Synodic y at Capture'] = res2[:, 1]
+    cluster_data_ini['Synodic z at Capture'] = res2[:, 2]
+    cluster_data_ini['Synodic vx at Capture'] = res2[:, 6]
+    cluster_data_ini['Synodic vy at Capture'] = res2[:, 7]
+    cluster_data_ini['Synodic vz at Capture'] = res2[:, 8]
+    cluster_data_ini['Moon (Synodic) x at Capture'] = res2[:, 3]
+    cluster_data_ini['Moon (Synodic) y at Capture'] = res2[:, 4]
+    cluster_data_ini['Moon (Synodic) z at Capture'] = res2[:, 5]
+    cluster_data_ini['Moon (Synodic) vx at Capture'] = res2[:, 9]
+    cluster_data_ini['Moon (Synodic) vy at Capture'] = res2[:, 10]
+    cluster_data_ini['Moon (Synodic) vz at Capture'] = res2[:, 11]
+
+    cluster_data_ini.to_csv('cluster_df_synodic.csv', sep=' ', header=True, index=False)
 
 if __name__ == '__main__':
+    synodic_main()
     # parse_main()
-    feature_selection_main()
+    # feature_selection_main()
 
     # trans, scaled, normed, train, test = preprocessing_main()
     # fuzzy_c_main()
     # estimator_tests()
+
