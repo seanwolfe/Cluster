@@ -896,6 +896,103 @@ def make_set3(master):
     return
 
 
+def make_set4(master, variable, axislabel, ylim):
+    fig8 = plt.figure()
+    ax1 = plt.subplot(3, 3, 1)
+    ax1.scatter(master['Synodic x at Capture'], variable, s=0.1)
+    ax1.set_xlabel('Synodic x at Capture (AU)')
+    ax1.set_ylabel(axislabel)
+    ax1.set_ylim(ylim)
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
+
+    ax2 = plt.subplot(3, 3, 2)
+    ax2.scatter(master['Synodic y at Capture'], variable, s=0.1)
+    ax2.set_xlabel('Synodic y at Capture (AU)')
+    ax2.set_ylabel(axislabel)
+    ax2.set_ylim(ylim)
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(3, 3, 3)
+    ax3.scatter(master['Synodic z at Capture'], variable, s=0.1)
+    ax3.set_xlabel('Synodic z at Capture (AU)')
+    ax3.set_ylabel(axislabel)
+    ax3.set_ylim(ylim)
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(3, 3, 4)
+    ax4.scatter(master['Synodic vx at Capture'], variable, s=0.1)
+    ax4.set_xlabel('Synodic vx at Capture')
+    ax4.set_ylabel(axislabel)
+    ax4.set_ylim(ylim)
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(3, 3, 5)
+    ax5.scatter(master['Synodic vy at Capture'], variable, s=0.1)
+    ax5.set_xlabel('Synodic vy at Capture')
+    ax5.set_ylabel(axislabel)
+    ax5.set_ylim(ylim)
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(3, 3, 6)
+    ax6.scatter(master['Synodic vz at Capture'], variable, s=0.1)
+    ax6.set_xlabel('Synodic vz at Capture')
+    ax6.set_ylabel(axislabel)
+    ax6.set_ylim(ylim)
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+
+    ax7 = plt.subplot(3, 3, 7)
+    ax7.scatter(master['Capture Date'], variable, s=0.1)
+    ax7.set_xlabel('Capture Date (JD)')
+    ax7.set_ylabel(axislabel)
+    ax7.set_ylim(ylim)
+
+    fig8 = plt.figure()
+    ax1 = plt.subplot(2, 3, 1)
+    ax1.scatter(master['Moon (Synodic) x at Capture'], variable, s=0.1)
+    ax1.set_xlabel('Moon (Synodic) x at Capture (AU)')
+    ax1.set_ylabel(axislabel)
+    ax1.set_ylim(ylim)
+    # plt.savefig("figures/helx_3hill.svg", format="svg")
+
+    ax2 = plt.subplot(2, 3, 2)
+    ax2.scatter(master['Moon (Synodic) y at Capture'], variable, s=0.1)
+    ax2.set_xlabel('Moon (Synodic) y at Capture (AU)')
+    ax2.set_ylabel(axislabel)
+    ax2.set_ylim(ylim)
+    # plt.savefig("figures/hely_3hill.svg", format="svg")
+
+    ax3 = plt.subplot(2, 3, 3)
+    ax3.scatter(master['Moon (Synodic) z at Capture'], variable, s=0.1)
+    ax3.set_xlabel('Moon (Synodic) z at Capture (AU)')
+    ax3.set_ylabel(axislabel)
+    ax3.set_ylim(ylim)
+    # plt.savefig("figures/helz_3hill.svg", format="svg")
+
+    ax4 = plt.subplot(2, 3, 4)
+    ax4.scatter(master['Moon (Synodic) vx at Capture'], variable, s=0.1)
+    ax4.set_xlabel('Moon (Synodic) vx at Capture')
+    ax4.set_ylabel(axislabel)
+    ax4.set_ylim(ylim)
+    # plt.savefig("figures/helvx_3hill.svg", format="svg")
+
+    ax5 = plt.subplot(2, 3, 5)
+    ax5.scatter(master['Moon (Synodic) vy at Capture'], variable, s=0.1)
+    ax5.set_xlabel('Moon (Synodic) vy at Capture')
+    ax5.set_ylabel(axislabel)
+    ax5.set_ylim(ylim)
+    # plt.savefig("figures/helvy_3hill.svg", format="svg")
+
+    ax6 = plt.subplot(2, 3, 6)
+    ax6.scatter(master['Moon (Synodic) vz at Capture'], variable, s=0.1)
+    ax6.set_xlabel('Moon (Synodic) vz at Capture')
+    ax6.set_ylabel(axislabel)
+    ax6.set_ylim(ylim)
+    # plt.savefig("figures/helvz_3hill.svg", format="svg")
+
+    plt.show()
+    return
+
+
 def eci_ecliptic_to_sunearth_synodic(object_id):
     """
     This function transforms coordinates from the ECI ecliptic plane to an Earth-centered Sun-Earth co-rotating frame,
@@ -907,35 +1004,40 @@ def eci_ecliptic_to_sunearth_synodic(object_id):
 
     file_path = 'cluster_df.csv'
     master = pd.read_csv(file_path, sep=' ', header=0,
-                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
-                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
-                                          "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
-                                          "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
-                                          "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
-                                          "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
-                                          "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
-                                          "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
-                                          "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
-                                          "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
-                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
-                                          "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
-                                          "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
-                                          "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
-                                          "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
-                                          "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
+                         names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
+                                'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
+                                "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
+                                "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
+                                "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
+                                "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
+                                "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
+                                "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
+                                "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
+                                "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
 
     obj_xyz = master[master['Object id'] == object_id].loc[:, ['Helio x at Capture', 'Helio y at Capture',
-              'Helio z at Capture']].to_numpy().reshape(3,)
+                                                               'Helio z at Capture']].to_numpy().reshape(3, )
     obj_vxyz = master[master['Object id'] == object_id].loc[:, ['Helio vx at Capture', 'Helio vy at Capture',
-               'Helio vz at Capture']].to_numpy().reshape(3,)
-    moon_xyz = master[master['Object id'] == object_id].loc[:, ['Moon (Helio) x at Capture', 'Moon (Helio) y at Capture',
-               'Moon (Helio) z at Capture']].to_numpy().reshape(3,)
+                                                                'Helio vz at Capture']].to_numpy().reshape(3, )
+    moon_xyz = master[master['Object id'] == object_id].loc[:,
+               ['Moon (Helio) x at Capture', 'Moon (Helio) y at Capture',
+                'Moon (Helio) z at Capture']].to_numpy().reshape(3, )
     moon_vxyz = master[master['Object id'] == object_id].loc[:, ['Moon (Helio) vx at Capture',
-                'Moon (Helio) vy at Capture', 'Moon (Helio) vz at Capture']].to_numpy().reshape(3,)
+                                                                 'Moon (Helio) vy at Capture',
+                                                                 'Moon (Helio) vz at Capture']].to_numpy().reshape(3, )
     earth_xyz = master[master['Object id'] == object_id].loc[:, ['Earth (Helio) x at Capture',
-                'Earth (Helio) y at Capture', 'Earth (Helio) z at Capture']].to_numpy().reshape(3,)
+                                                                 'Earth (Helio) y at Capture',
+                                                                 'Earth (Helio) z at Capture']].to_numpy().reshape(3, )
     earth_vxyz = master[master['Object id'] == object_id].loc[:, ['Earth (Helio) vx at Capture',
-                 'Earth (Helio) vy at Capture', 'Earth (Helio) vz at Capture']].to_numpy().reshape(3,)
+                                                                  'Earth (Helio) vy at Capture',
+                                                                  'Earth (Helio) vz at Capture']].to_numpy().reshape(
+        3, )
 
     u_s = (- earth_xyz / np.linalg.norm(earth_xyz))
     theta = np.arctan2(u_s[1], u_s[0])
@@ -945,8 +1047,8 @@ def eci_ecliptic_to_sunearth_synodic(object_id):
 
     omega = np.cross(earth_xyz, earth_vxyz) / np.linalg.norm(earth_xyz) ** 2
 
-    t_obj_xyz = Rz_theta.T @ obj_xyz
-    t_moon_xyz = np.matmul(Rz_theta.T, obj_xyz)
+    t_obj_xyz = Rz_theta.T @ obj_xyz - np.array([np.linalg.norm(earth_xyz), 0., 0.])
+    t_moon_xyz = np.matmul(Rz_theta.T, obj_xyz) - np.array([np.linalg.norm(earth_xyz), 0., 0.])
     v_obj_xyz = Rz_theta.T @ (obj_vxyz - earth_vxyz) - np.cross(Rz_theta.T @ omega, t_obj_xyz)
     v_moon_xyz = Rz_theta.T @ (moon_vxyz - earth_vxyz) - np.cross(Rz_theta.T @ omega, t_moon_xyz)
     ans = np.reshape([t_obj_xyz, t_moon_xyz, v_obj_xyz, v_moon_xyz], (12,))
@@ -1328,6 +1430,7 @@ def estimator_tests():
     # print(abs(test_y - clf.predict(test_X)/test_y * 100)[:100])
     # print(sum(abs(test_y - clf.predict(test_X))) / len(test_y))
 
+
 @staticmethod
 def synodic_main():
     file_path = 'cluster_df.csv'
@@ -1349,7 +1452,6 @@ def synodic_main():
                                           "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
                                           "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
 
-
     res = eci_ecliptic_to_sunearth_synodic(cluster_data_ini['Object id'].iloc[0])
     pool = multiprocessing.Pool()
     res = pool.map(eci_ecliptic_to_sunearth_synodic, cluster_data_ini['Object id'])  # input your function
@@ -1370,7 +1472,34 @@ def synodic_main():
 
     cluster_data_ini.to_csv('cluster_df_synodic.csv', sep=' ', header=True, index=False)
 
+
 if __name__ == '__main__':
+    file_path = 'cluster_df_synodic.csv'
+    master = pd.read_csv(file_path, sep=' ', header=0,
+                         names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
+                                'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
+                                "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
+                                "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
+                                "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
+                                "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
+                                "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
+                                "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
+                                "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
+                                "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
+                                "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
+                                "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
+                                "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture", "Synodic x at Capture",
+                                "Synodic y at Capture", "Synodic z at Capture", "Synodic vx at Capture",
+                                "Synodic vy at Capture", "Synodic vz at Capture", "Moon (Synodic) x at Capture",
+                                "Moon (Synodic) y at Capture", "Moon (Synodic) z at Capture",
+                                "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
+                                "Moon (Synodic) vz at Capture"])
+
+    make_set4(master, master['1 Hill Duration'], '1 Hill Duration', [0,10000])
+
     synodic_main()
     # parse_main()
     # feature_selection_main()
@@ -1378,4 +1507,3 @@ if __name__ == '__main__':
     # trans, scaled, normed, train, test = preprocessing_main()
     # fuzzy_c_main()
     # estimator_tests()
-
