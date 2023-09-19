@@ -1004,22 +1004,30 @@ def eci_ecliptic_to_sunearth_synodic(object_id):
 
     file_path = 'cluster_df.csv'
     master = pd.read_csv(file_path, sep=' ', header=0,
-                         names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
-                                'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
-                                "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
-                                "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
-                                "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
-                                "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
-                                "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
-                                "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
-                                "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                         names=['Object id', '1 Hill Duration', 'Min. Distance', 'EMS Duration', 'Retrograde',
+                                'STC', 'Became Minimoon', 'Taxonomy',
+                                '3 Hill Duration', 'Helio x at Capture', 'Helio y at Capture',
+                                'Helio z at Capture', 'Helio vx at Capture',
+                                'Helio vy at Capture', 'Helio vz at Capture',
+                                'Moon (Helio) x at Capture',
+                                'Moon (Helio) y at Capture',
+                                'Moon (Helio) z at Capture',
+                                'Moon (Helio) vx at Capture',
+                                'Moon (Helio) vy at Capture',
+                                'Moon (Helio) vz at Capture', 'Capture Date', "Helio x at EMS",
+                                "Helio y at EMS",
+                                "Helio z at EMS",
+                                "Helio vx at EMS", "Helio vy at EMS", "Helio vz at EMS",
+                                "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
                                 "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
-                                "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
-                                "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)",
+                                "Moon x at EMS (Helio)", "Moon y at EMS (Helio)",
+                                "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
                                 "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
-                                "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
-                                "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
-                                "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
+                                'Earth (Helio) x at Capture', 'Earth (Helio) y at Capture',
+                                'Earth (Helio) z at Capture',
+                                'Earth (Helio) vx at Capture', 'Earth (Helio) vy at Capture',
+                                'Earth (Helio) vz at Capture'])
 
     obj_xyz = master[master['Object id'] == object_id].loc[:, ['Helio x at Capture', 'Helio y at Capture',
                                                                'Helio z at Capture']].to_numpy().reshape(3, )
@@ -1047,8 +1055,8 @@ def eci_ecliptic_to_sunearth_synodic(object_id):
 
     omega = np.cross(earth_xyz, earth_vxyz) / np.linalg.norm(earth_xyz) ** 2
 
-    t_obj_xyz = Rz_theta.T @ obj_xyz - np.array([np.linalg.norm(earth_xyz), 0., 0.])
-    t_moon_xyz = np.matmul(Rz_theta.T, obj_xyz) - np.array([np.linalg.norm(earth_xyz), 0., 0.])
+    t_obj_xyz = Rz_theta.T @ (obj_xyz - earth_xyz)
+    t_moon_xyz = Rz_theta.T @ (moon_xyz - earth_xyz)
     v_obj_xyz = Rz_theta.T @ (obj_vxyz - earth_vxyz) - np.cross(Rz_theta.T @ omega, t_obj_xyz)
     v_moon_xyz = Rz_theta.T @ (moon_vxyz - earth_vxyz) - np.cross(Rz_theta.T @ omega, t_moon_xyz)
     ans = np.reshape([t_obj_xyz, t_moon_xyz, v_obj_xyz, v_moon_xyz], (12,))
@@ -1435,24 +1443,33 @@ def estimator_tests():
 def synodic_main():
     file_path = 'cluster_df.csv'
     cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
-                                   names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
-                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
-                                          "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
-                                          "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
-                                          "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
-                                          "Moon (Helio) vx at Capture", "Moon (Helio) vy at Capture",
-                                          "Moon (Helio) vz at Capture", "Capture Date", "Helio x at EMS",
-                                          "Helio y at EMS", "Helio z at EMS", "Helio vx at EMS", "Helio vy at EMS",
-                                          "Helio vz at EMS", "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
+                                   names=['Object id', '1 Hill Duration', 'Min. Distance', 'EMS Duration', 'Retrograde',
+                                          'STC', 'Became Minimoon', 'Taxonomy',
+                                          '3 Hill Duration', 'Helio x at Capture', 'Helio y at Capture',
+                                          'Helio z at Capture', 'Helio vx at Capture',
+                                          'Helio vy at Capture', 'Helio vz at Capture',
+                                          'Moon (Helio) x at Capture',
+                                          'Moon (Helio) y at Capture',
+                                          'Moon (Helio) z at Capture',
+                                          'Moon (Helio) vx at Capture',
+                                          'Moon (Helio) vy at Capture',
+                                          'Moon (Helio) vz at Capture', 'Capture Date', "Helio x at EMS",
+                                          "Helio y at EMS",
+                                          "Helio z at EMS",
+                                          "Helio vx at EMS", "Helio vy at EMS", "Helio vz at EMS",
+                                          "Earth x at EMS (Helio)", "Earth y at EMS (Helio)",
                                           "Earth z at EMS (Helio)", "Earth vx at EMS (Helio)",
-                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)", "Moon x at EMS (Helio)",
-                                          "Moon y at EMS (Helio)", "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
+                                          "Earth vy at EMS (Helio)", "Earth vz at EMS (Helio)",
+                                          "Moon x at EMS (Helio)", "Moon y at EMS (Helio)",
+                                          "Moon z at EMS (Helio)", "Moon vx at EMS (Helio)",
                                           "Moon vy at EMS (Helio)", "Moon vz at EMS (Helio)", "Entry Date to EMS",
-                                          "Earth (Helio) x at Capture", "Earth (Helio) y at Capture",
-                                          "Earth (Helio) z at Capture", "Earth (Helio) vx at Capture",
-                                          "Earth (Helio) vy at Capture", "Earth (Helio) vz at Capture"])
+                                          'Earth (Helio) x at Capture', 'Earth (Helio) y at Capture',
+                                          'Earth (Helio) z at Capture',
+                                          'Earth (Helio) vx at Capture', 'Earth (Helio) vy at Capture',
+                                          'Earth (Helio) vz at Capture'])
 
-    res = eci_ecliptic_to_sunearth_synodic(cluster_data_ini['Object id'].iloc[0])
+    print(cluster_data_ini)
+
     pool = multiprocessing.Pool()
     res = pool.map(eci_ecliptic_to_sunearth_synodic, cluster_data_ini['Object id'])  # input your function
     pool.close()
@@ -1471,6 +1488,9 @@ def synodic_main():
     cluster_data_ini['Moon (Synodic) vz at Capture'] = res2[:, 11]
 
     cluster_data_ini.to_csv('cluster_df_synodic.csv', sep=' ', header=True, index=False)
+
+    plt.scatter(cluster_data_ini['Synodic x at Capture'], cluster_data_ini['Synodic y at Capture'], s=0.1)
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -1498,7 +1518,7 @@ if __name__ == '__main__':
                                 "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
                                 "Moon (Synodic) vz at Capture"])
 
-    make_set4(master, master['1 Hill Duration'], '1 Hill Duration', [0,10000])
+    # make_set4(master, master['1 Hill Duration'], '1 Hill Duration', [0,10000])
 
     synodic_main()
     # parse_main()
