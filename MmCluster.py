@@ -1682,7 +1682,7 @@ if __name__ == '__main__':
     file_path = 'cluster_df_synodic.csv'
     master = pd.read_csv(file_path, sep=' ', header=0,
                          names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
-                                'STC', "Became Minimoon", 'Taxonomy' "3 Hill Duration", "Helio x at Capture",
+                                'STC', "Became Minimoon", 'Taxonomy', "3 Hill Duration", "Helio x at Capture",
                                 "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
                                 "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
                                 "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
@@ -1703,7 +1703,7 @@ if __name__ == '__main__':
                                 "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
                                 "Moon (Synodic) vz at Capture"])
 
-    # add_classes(master)
+    add_classes(master)
 
     # make_set3(master)
     # make_set4(master, master['1 Hill Duration'], '1 Hill Duration', [0,10000])
@@ -1714,4 +1714,4 @@ if __name__ == '__main__':
 
     # trans, scaled, normed, train, test = preprocessing_main()
     # fuzzy_c_main()
-    estimator_tests()
+    # estimator_tests()
