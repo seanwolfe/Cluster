@@ -15,12 +15,26 @@ from sklearn import svm
 from sklearn.pipeline import make_pipeline
 import multiprocessing
 import sklearn as sk
-from sklearn.neural_network import MLPRegressor
-from sklearn.kernel_ridge import KernelRidge
-from sklearn.svm import SVR
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import SGDClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import ComplementNB
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
+
+classifiers = [MLPClassifier(), SVC(), RandomForestClassifier(), GradientBoostingClassifier(), SGDClassifier(),
+               KNeighborsClassifier(), GaussianNB(), MultinomialNB(), ComplementNB(), DecisionTreeClassifier(),
+               BaggingClassifier(), ExtraTreesClassifier(), AdaBoostClassifier(), HistGradientBoostingClassifier(),
+               GaussianProcessClassifier()]
 
 rx_dict = {
     'Best chromosome': re.compile(r"Best chromosome: \[(?P<bchrome>(\d+ ){17}\d)"),
@@ -1510,39 +1524,101 @@ def estimator_tests():
                                           "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
                                           "Moon (Synodic) vz at Capture", 'Crossed 1 Hill', '100+ Days in 1 Hill'])
 
-    transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
-        cluster_data_ini.loc[:, ["Helio x at Capture",
-                                 "Helio y at Capture",
-                                 "Helio z at Capture",
-                                 "Helio vx at Capture",
-                                 "Helio vy at Capture",
-                                 "Helio vz at Capture",
-                                 "Moon (Helio) x at Capture",
-                                 "Moon (Helio) y at Capture",
-                                 "Moon (Helio) z at Capture",
-                                 "Moon (Helio) vx at Capture",
-                                 "Moon (Helio) vy at Capture",
-                                 "Moon (Helio) vz at Capture",
-                                 "Earth (Helio) x at Capture",
-                                 "Earth (Helio) y at Capture",
-                                 "Earth (Helio) z at Capture",
-                                 "Earth (Helio) vx at Capture",
-                                 "Earth (Helio) vy at Capture",
-                                 "Earth (Helio) vz at Capture"]],
-        cluster_data_ini['100+ Days in 1 Hill'])
+
 
     # pipe = make_pipeline(preprocessing.StandardScaler(), RandomForestClassifier())
     # pipe.fit(train_X, train_y)
     # print(pipe.score(test_X, test_y))
 
-    pipe = make_pipeline(RandomForestClassifier())
-    pipe.fit(train_X, train_y)
-    print(pipe.score(test_X, test_y))
+    classifiers = [MLPClassifier(), SVC(), RandomForestClassifier(), GradientBoostingClassifier(), SGDClassifier(),
+                   KNeighborsClassifier(), GaussianNB(), DecisionTreeClassifier(),
+                   BaggingClassifier(), ExtraTreesClassifier(), AdaBoostClassifier(), HistGradientBoostingClassifier(),
+                   GaussianProcessClassifier()]
 
-    # pipe4 = make_pipeline(preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
-    #                       RandomForestClassifier())
-    # pipe4.fit(train_X, train_y)
-    # print(pipe4.score(test_X, test_y))
+    labels = ['Neural Network Classifier', 'Support Vector Machine Classifier', 'Random Forest Classifier',
+              'Gradiant Boosting Classifier', 'Stochastic Gradient Descent Classifier', 'K Nearest Neighbor Classifier',
+              'Gaussian Naive Bayes', 'Decision Tree Classifier', 'Bagging Classifier',
+              'Extremely Randomized Tree Classifier', 'Ada Boost Classifier',
+              'Histogram Gradient Boosting Classifier', 'Gaussian Process Classifier']
+
+    data_labels = ['Heliocentric', 'Synodic']
+    target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill'] #,
+                     #'Taxonomy']
+
+    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill'] #, 'Taxonomy']
+
+
+    for k, target_label in enumerate(target_labels):
+        data = []
+        for j, data_label in enumerate(data_labels):
+            if data_label == 'Heliocentric':
+                transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
+                    cluster_data_ini.loc[:, ["Helio x at Capture",
+                                             "Helio y at Capture",
+                                             "Helio z at Capture",
+                                             "Helio vx at Capture",
+                                             "Helio vy at Capture",
+                                             "Helio vz at Capture",
+                                             "Moon (Helio) x at Capture",
+                                             "Moon (Helio) y at Capture",
+                                             "Moon (Helio) z at Capture",
+                                             "Moon (Helio) vx at Capture",
+                                             "Moon (Helio) vy at Capture",
+                                             "Moon (Helio) vz at Capture",
+                                             "Earth (Helio) x at Capture",
+                                             "Earth (Helio) y at Capture",
+                                             "Earth (Helio) z at Capture",
+                                             "Earth (Helio) vx at Capture",
+                                             "Earth (Helio) vy at Capture",
+                                             "Earth (Helio) vz at Capture"]], cluster_data_ini[target_label])
+            elif data_label == 'Synodic':
+                transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
+                    cluster_data_ini.loc[:, ["Synodic x at Capture",
+                                             "Synodic y at Capture",
+                                             "Synodic z at Capture",
+                                             "Synodic vx at Capture",
+                                             "Synodic vy at Capture",
+                                             "Synodic vz at Capture",
+                                             "Moon (Synodic) x at Capture",
+                                             "Moon (Synodic) y at Capture",
+                                             "Moon (Synodic) z at Capture",
+                                             "Moon (Synodic) vx at Capture",
+                                             "Moon (Synodic) vy at Capture",
+                                             "Moon (Synodic) vz at Capture"]], cluster_data_ini[target_label])
+
+
+            for i, classifier in enumerate(classifiers):
+                pipe = make_pipeline(classifier)
+                pipe.fit(train_X, train_y)
+                acc = pipe.score(test_X, test_y)
+                data.append(round(100 * acc, 2))
+                print('Classifier: ' + str(labels[i]))
+                print('Dataset: ' + str(data_labels[j]))
+                print('Target Class: ' + str(target_classes[k]))
+                print('Accuracy: ' + str(acc) + '\n')
+
+        data = np.array(data).reshape((len(classifiers), len(data_labels)))
+        overall_data = cluster_data_ini[target_label]
+        num_classes = set(overall_data)
+        total_samples = len(overall_data)
+        pops = []
+        for idx, type in enumerate(num_classes):
+            pops.append(round(len(overall_data[overall_data == type])/total_samples * 100, 2))
+
+        fig, ax = plt.subplots()
+
+        # hide axes
+        fig.patch.set_visible(False)
+        ax.axis('off')
+        ax.axis('tight')
+        ax.table(cellText=data, rowLabels=labels, colLabels=data_labels, loc='center')
+        ax.set_title('Accuracy of Various Estimators for target: ' + str(target_classes[k]) +
+                     '\n with distribution: ' + str(pops) +
+                     '\n mean Heliocentric: ' + str(round(np.mean(data[:, 0]), 2)) + '    mean Synodic: ' +
+                     str(round(np.mean(data[:, 1]), 2)))
+        fig.tight_layout()
+
+        plt.show()
 
     return
 
