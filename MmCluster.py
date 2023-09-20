@@ -30,6 +30,8 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.ensemble import VotingClassifier
 
 classifiers = [MLPClassifier(), SVC(), RandomForestClassifier(), GradientBoostingClassifier(), SGDClassifier(),
                KNeighborsClassifier(), GaussianNB(), MultinomialNB(), ComplementNB(), DecisionTreeClassifier(),
@@ -1396,30 +1398,48 @@ def fuzzy_c_main():
 
 @staticmethod
 def preprocessing_main(X, y):
-    # fig = plt.figure()
-    # plt.hist(cluster_data['Helio vz at Capture'], 1000)
-    # fig = plt.figure()
-    # plt.hist(cluster_data_train['1 Hill Duration'], 1000)
-    # fig = plt.figure()
-    # plt.hist(cluster_data_train['Min. Distance'], 1000)
     random_state = 42
-    train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.20, random_state=random_state)
+    biased_train_X, test_X, biased_train_y, test_y = train_test_split(X, y, test_size=0.20, stratify=y,
+                                                                      random_state=random_state)
+
+    classes = set(biased_train_y)
+    indices = [np.where(biased_train_y == class_i) for i, class_i in enumerate(classes)]
+    num_in_class = [len(indices_i[0]) for j, indices_i in enumerate(indices)]
+    data_Xy = np.hstack((biased_train_X, np.array([biased_train_y]).T))
+    data_class_1 = data_Xy[indices[1], :].reshape((num_in_class[1], len(data_Xy[0])))
+    data_class_0 = data_Xy[indices[0], :].reshape((num_in_class[0], len(data_Xy[0])))
+    augmented_data_Xy = data_Xy.copy()
+
+    if num_in_class[0] > num_in_class[1]:
+        ratio = int(num_in_class[0] / num_in_class[1])
+        for i in range(ratio - 1):
+            augmented_data_Xy = np.vstack((augmented_data_Xy, data_class_1))
+    elif num_in_class[0] < num_in_class[1]:
+        ratio = int(num_in_class[1] / num_in_class[0])
+        for i in range(ratio - 1):
+            augmented_data_Xy = np.vstack((augmented_data_Xy, data_class_0))
+    else:
+        pass
+
+    np.random.shuffle(augmented_data_Xy)
+
+    train_X = augmented_data_Xy[:, :-1]
+    train_y = augmented_data_Xy[:, -1].ravel()
+
+    indices_new = [np.where(train_y == class_i) for i, class_i in enumerate(classes)]
+    num_in_class_new = [len(indices_i[0]) for j, indices_i in enumerate(indices_new)]
+
+    print('Original samples of classes in training: ' + str(num_in_class))
+    print('New samples of classes in training: ' + str(num_in_class_new))
+
     quantile_transformer = preprocessing.QuantileTransformer(output_distribution='normal', random_state=0)
     cluster_data_trans = quantile_transformer.fit_transform(test_X)
-    scalar = preprocessing.StandardScaler().fit(train_X.to_numpy())
-    train_scaled = scalar.transform(train_X.to_numpy())
-    train_normed = preprocessing.normalize(train_X.to_numpy(), norm='l2')
+    scalar = preprocessing.StandardScaler().fit(train_X)
+    train_scaled = scalar.transform(train_X)
+    train_normed = preprocessing.normalize(train_X, norm='l2')
 
-    # fig = plt.figure()
-    # plt.hist(cluster_data_trans[:, 0], 1000)
-    # fig = plt.figure()
-    # plt.hist(cluster_data_trans[:, 1], 1000)
-    # fig = plt.figure()
-    # plt.hist(cluster_data_trans[:, 2], 1000)
-    # plt.show()
-
-    return (cluster_data_trans, train_scaled, train_normed, train_X.to_numpy(), train_y.to_numpy(), test_X.to_numpy(),
-            test_y.to_numpy())
+    return (cluster_data_trans, train_scaled, train_normed, train_X, train_y, test_X.to_numpy(),
+            test_y.to_numpy(), biased_train_X.to_numpy(), biased_train_y.to_numpy())
 
 
 def OPTICS_main(cluster_data_train, cluster_data_trans):
@@ -1501,7 +1521,7 @@ def estimator_tests():
     file_path = 'cluster_df_synodic_classes.csv'
     cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
                                    names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
-                                          'STC', "Became Minimoon", "3 Hill Duration", "Helio x at Capture",
+                                          'STC', "Became Minimoon", 'Taxonomy', "3 Hill Duration", "Helio x at Capture",
                                           "Helio y at Capture", "Helio z at Capture", "Helio vx at Capture",
                                           "Helio vy at Capture", "Helio vz at Capture", "Moon (Helio) x at Capture",
                                           "Moon (Helio) y at Capture", "Moon (Helio) z at Capture",
@@ -1524,35 +1544,55 @@ def estimator_tests():
                                           "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
                                           "Moon (Synodic) vz at Capture", 'Crossed 1 Hill', '100+ Days in 1 Hill'])
 
-
-
     # pipe = make_pipeline(preprocessing.StandardScaler(), RandomForestClassifier())
     # pipe.fit(train_X, train_y)
     # print(pipe.score(test_X, test_y))
 
+    ###############################
+    # all options
+    ###############################
+
     classifiers = [MLPClassifier(), SVC(), RandomForestClassifier(), GradientBoostingClassifier(), SGDClassifier(),
                    KNeighborsClassifier(), GaussianNB(), DecisionTreeClassifier(),
-                   BaggingClassifier(), ExtraTreesClassifier(), AdaBoostClassifier(), HistGradientBoostingClassifier(),
-                   GaussianProcessClassifier()]
+                   BaggingClassifier(), ExtraTreesClassifier(), AdaBoostClassifier(),
+                   HistGradientBoostingClassifier()]  # ,
+    # GaussianProcessClassifier()]
 
     labels = ['Neural Network Classifier', 'Support Vector Machine Classifier', 'Random Forest Classifier',
               'Gradiant Boosting Classifier', 'Stochastic Gradient Descent Classifier', 'K Nearest Neighbor Classifier',
               'Gaussian Naive Bayes', 'Decision Tree Classifier', 'Bagging Classifier',
               'Extremely Randomized Tree Classifier', 'Ada Boost Classifier',
-              'Histogram Gradient Boosting Classifier', 'Gaussian Process Classifier']
+              'Histogram Gradient Boosting Classifier']  # , 'Gaussian Process Classifier']
+
+    target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill',
+                      'Taxonomy']
+    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill', 'Taxonomy']
 
     data_labels = ['Heliocentric', 'Synodic']
-    target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill'] #,
-                     #'Taxonomy']
 
-    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill'] #, 'Taxonomy']
+    #####################################
+    # desired options
+    ####################################
+    classifiers = [RandomForestClassifier(), HistGradientBoostingClassifier(),
+                   VotingClassifier(estimators=[('rf', RandomForestClassifier()),
+                                                ('hgb', HistGradientBoostingClassifier())], voting='soft')]
+    labels = ['Random Forest Classifier', 'Histogram Gradient Boosting Classifier', 'Voting Classifier']
+    target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill']
+    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill']
+    data_labels = ['Synodic']
 
+    ######################################
+    # hyperparameter tuning
+    #####################################
+
+    # important for random forest: num trees, num features considered at each split, tree depth
+    # important for
 
     for k, target_label in enumerate(target_labels):
         data = []
         for j, data_label in enumerate(data_labels):
             if data_label == 'Heliocentric':
-                transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
+                transed, scaled, normed, train_X, train_y, test_X, test_y, biased_train_X, biased_train_y = preprocessing_main(
                     cluster_data_ini.loc[:, ["Helio x at Capture",
                                              "Helio y at Capture",
                                              "Helio z at Capture",
@@ -1572,7 +1612,7 @@ def estimator_tests():
                                              "Earth (Helio) vy at Capture",
                                              "Earth (Helio) vz at Capture"]], cluster_data_ini[target_label])
             elif data_label == 'Synodic':
-                transed, scaled, normed, train_X, train_y, test_X, test_y = preprocessing_main(
+                transed, scaled, normed, train_X, train_y, test_X, test_y, biased_train_X, biased_train_y = preprocessing_main(
                     cluster_data_ini.loc[:, ["Synodic x at Capture",
                                              "Synodic y at Capture",
                                              "Synodic z at Capture",
@@ -1586,24 +1626,27 @@ def estimator_tests():
                                              "Moon (Synodic) vy at Capture",
                                              "Moon (Synodic) vz at Capture"]], cluster_data_ini[target_label])
 
-
             for i, classifier in enumerate(classifiers):
-                pipe = make_pipeline(classifier)
-                pipe.fit(train_X, train_y)
-                acc = pipe.score(test_X, test_y)
+                classifier.fit(train_X, train_y)
+                pred_y = classifier.predict(test_X)
+                class_labels = set(train_y)
+                tn, fp, fn, tp = confusion_matrix(test_y, pred_y, labels=list(class_labels)).ravel()
+                acc = (tn + tp) / (tn + fp + fn + tp)
                 data.append(round(100 * acc, 2))
                 print('Classifier: ' + str(labels[i]))
                 print('Dataset: ' + str(data_labels[j]))
                 print('Target Class: ' + str(target_classes[k]))
-                print('Accuracy: ' + str(acc) + '\n')
+                print('Accuracy: ' + str(acc))
+                print('True Negatives: ' + str(tn) + '    False Positive: ' + str(fp) + '    False Negative: ' +
+                      str(fn) + '    True Positives: ' + str(tp) + '\n')
 
-        data = np.array(data).reshape((len(classifiers), len(data_labels)))
+        data = np.array(data).reshape((len(data_labels), len(classifiers)))
         overall_data = cluster_data_ini[target_label]
         num_classes = set(overall_data)
         total_samples = len(overall_data)
         pops = []
         for idx, type in enumerate(num_classes):
-            pops.append(round(len(overall_data[overall_data == type])/total_samples * 100, 2))
+            pops.append(round(len(overall_data[overall_data == type]) / total_samples * 100, 2))
 
         fig, ax = plt.subplots()
 
@@ -1611,7 +1654,7 @@ def estimator_tests():
         fig.patch.set_visible(False)
         ax.axis('off')
         ax.axis('tight')
-        ax.table(cellText=data, rowLabels=labels, colLabels=data_labels, loc='center')
+        ax.table(cellText=data.T, rowLabels=labels, colLabels=data_labels, loc='center')
         ax.set_title('Accuracy of Various Estimators for target: ' + str(target_classes[k]) +
                      '\n with distribution: ' + str(pops) +
                      '\n mean Heliocentric: ' + str(round(np.mean(data[:, 0]), 2)) + '    mean Synodic: ' +
@@ -1703,7 +1746,7 @@ if __name__ == '__main__':
                                 "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
                                 "Moon (Synodic) vz at Capture"])
 
-    add_classes(master)
+    # add_classes(master)
 
     # make_set3(master)
     # make_set4(master, master['1 Hill Duration'], '1 Hill Duration', [0,10000])
@@ -1714,4 +1757,4 @@ if __name__ == '__main__':
 
     # trans, scaled, normed, train, test = preprocessing_main()
     # fuzzy_c_main()
-    # estimator_tests()
+    estimator_tests()
