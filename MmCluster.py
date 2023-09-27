@@ -32,11 +32,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import VotingClassifier
-
-classifiers = [MLPClassifier(), SVC(), RandomForestClassifier(), GradientBoostingClassifier(), SGDClassifier(),
-               KNeighborsClassifier(), GaussianNB(), MultinomialNB(), ComplementNB(), DecisionTreeClassifier(),
-               BaggingClassifier(), ExtraTreesClassifier(), AdaBoostClassifier(), HistGradientBoostingClassifier(),
-               GaussianProcessClassifier()]
+from sklearn.metrics import accuracy_score
 
 rx_dict = {
     'Best chromosome': re.compile(r"Best chromosome: \[(?P<bchrome>(\d+ ){17}\d)"),
@@ -1406,22 +1402,28 @@ def preprocessing_main(X, y):
     indices = [np.where(train_y == class_i) for i, class_i in enumerate(classes)]
     num_in_class = [len(indices_i[0]) for j, indices_i in enumerate(indices)]
     data_Xy = np.hstack((train_X, np.array([train_y]).T))
-    data_class_1 = data_Xy[indices[1], :].reshape((num_in_class[1], len(data_Xy[0])))
-    data_class_0 = data_Xy[indices[0], :].reshape((num_in_class[0], len(data_Xy[0])))
+    data_classes = []
+    for j, value in enumerate(classes):
+        data_class_i = data_Xy[indices[j], :].reshape((num_in_class[j], len(data_Xy[0])))
+        data_classes.append(data_class_i)
     augmented_data_Xy = data_Xy.copy()
 
-    if num_in_class[0] > num_in_class[1]:
-        ratio = int(num_in_class[0] / num_in_class[1])
-        undersampled_data_Xy = np.vstack((data_class_1, data_class_0[:num_in_class[1], :]))
-        for i in range(ratio - 1):
-            augmented_data_Xy = np.vstack((augmented_data_Xy, data_class_1))
-    elif num_in_class[0] < num_in_class[1]:
-        ratio = int(num_in_class[1] / num_in_class[0])
-        undersampled_data_Xy = np.vstack((data_class_0, data_class_1[:num_in_class[0], :]))
-        for i in range(ratio - 1):
-            augmented_data_Xy = np.vstack((augmented_data_Xy, data_class_0))
-    else:
-        undersampled_data_Xy = data_Xy.copy()
+    # oversampling
+    max_samples = max(num_in_class)
+    for i, val in enumerate(num_in_class):
+        if val == max_samples: # you do not need to augment this class because it is already the largest
+            pass
+        else:
+            ratio = int(max_samples / val)
+            for j in range(ratio - 1):
+                augmented_data_Xy = np.vstack((augmented_data_Xy, data_classes[i]))
+
+    # undersampling
+    min_samples = min(num_in_class)
+    undersampled_data_Xy = data_Xy[0, :]
+    for i, val in enumerate(num_in_class):
+        undersampled_data_Xy = np.vstack((undersampled_data_Xy, data_classes[i][:min_samples, :]))
+
 
     np.random.shuffle(augmented_data_Xy)
     np.random.shuffle(undersampled_data_Xy)
@@ -1539,7 +1541,7 @@ def OPTICS_main(cluster_data_train, cluster_data_trans):
 
 
 def estimator_tests():
-    file_path = 'cluster_df_synodic_classes.csv'
+    file_path = 'cluster_df_synodic_classes2.csv'
     cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
                                    names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
                                           'STC', "Became Minimoon", 'Taxonomy', "3 Hill Duration", "Helio x at Capture",
@@ -1563,11 +1565,9 @@ def estimator_tests():
                                           "Moon (Synodic) x at Capture",
                                           "Moon (Synodic) y at Capture", "Moon (Synodic) z at Capture",
                                           "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
-                                          "Moon (Synodic) vz at Capture", 'Crossed 1 Hill', '100+ Days in 1 Hill'])
+                                          "Moon (Synodic) vz at Capture", 'Crossed 1 Hill', '100+ Days in 1 Hill',
+                                          'Classed 1 Hill Duration', 'Classed Minimum Distance'])
 
-    # pipe = make_pipeline(preprocessing.StandardScaler(), RandomForestClassifier())
-    # pipe.fit(train_X, train_y)
-    # print(pipe.score(test_X, test_y))
 
     ###############################
     # all options
@@ -1586,8 +1586,9 @@ def estimator_tests():
               'Histogram Gradient Boosting Classifier']  # , 'Gaussian Process Classifier']
 
     target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill',
-                      'Taxonomy']
-    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill', 'Taxonomy']
+                      'Taxonomy', 'Classed 1 Hill Duration', 'Classed Minimum Distance']
+    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill', 'Taxonomy',
+                     '1 Hill Duration', 'Minimum Distance']
 
     data_labels = ['Heliocentric', 'Synodic']
 
@@ -1600,10 +1601,11 @@ def estimator_tests():
                    VotingClassifier(estimators=[('rf', RandomForestClassifier()),
                                                 ('hgb', HistGradientBoostingClassifier())], voting='soft')]
     labels = ['Random Forest Classifier', 'Histogram Gradient Boosting Classifier', 'Voting Classifier']
-    target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill']
-    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill']
+    target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', '1 Hill Duration', 'Minimum Distance']
+    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Classed 1 Hill Duration',
+                     'Classed Minimum Distance']
     data_labels = ['Synodic']
-    dataset_forms = ['Original', 'Oversampled', 'Undersampled']
+    dataset_forms = ['Oversampled']
 
     ######################################
     # hyperparameter tuning
@@ -1652,7 +1654,7 @@ def estimator_tests():
                 for n, data_type in enumerate(dataset_forms):
                     if data_type == 'Quantile Transform':
                         train_X = datasets[6]
-                        train_y = datatsets[1]
+                        train_y = datasets[1]
                         test_X = datasets[7]
                         test_y = datasets[13]
                     elif data_type == 'Standard Scalar':
@@ -1684,41 +1686,40 @@ def estimator_tests():
                     classifier.fit(train_X, train_y)
                     pred_y = classifier.predict(test_X)
                     class_labels = set(train_y)
-                    tn, fp, fn, tp = confusion_matrix(test_y, pred_y, labels=list(class_labels)).ravel()
-                    acc = (tn + tp) / (tn + fp + fn + tp)
+                    mat = confusion_matrix(test_y, pred_y, labels=list(class_labels)).ravel()
+                    acc = accuracy_score(test_y, pred_y)
                     data.append(round(100 * acc, 2))
                     print('Data type: ' + str(dataset_forms[n]))
                     print('Classifier: ' + str(labels[i]))
                     print('Dataset: ' + str(data_labels[j]))
                     print('Target Class: ' + str(target_classes[k]))
                     print('Accuracy: ' + str(acc))
-                    print('True Negatives: ' + str(tn) + '    False Positive: ' + str(fp) + '    False Negative: ' +
-                          str(fn) + '    True Positives: ' + str(tp) + '\n')
+                    # print('True Negatives: ' + str(tn) + '    False Positive: ' + str(fp) + '    False Negative: ' +
+                    #       str(fn) + '    True Positives: ' + str(tp) + '\n')
 
-        """
-        data = np.array(data).reshape((len(data_labels), len(classifiers)))
-        overall_data = cluster_data_ini[target_label]
-        num_classes = set(overall_data)
-        total_samples = len(overall_data)
-        pops = []
-        for idx, type in enumerate(num_classes):
-            pops.append(round(len(overall_data[overall_data == type]) / total_samples * 100, 2))
-
-        fig, ax = plt.subplots()
+                    print('Confusion Matrix: ' + str(mat) + '\n')
+        # data = np.array(data).reshape((len(data_labels), len(classifiers)))
+        # overall_data = cluster_data_ini[target_label]
+        # num_classes = set(overall_data)
+        # total_samples = len(overall_data)
+        # pops = []
+        # for idx, type in enumerate(num_classes):
+        #     pops.append(round(len(overall_data[overall_data == type]) / total_samples * 100, 2))
+        #
+        # fig, ax = plt.subplots()
 
         # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        ax.table(cellText=data.T, rowLabels=labels, colLabels=data_labels, loc='center')
-        ax.set_title('Accuracy of Various Estimators for target: ' + str(target_classes[k]) +
-                     '\n with distribution: ' + str(pops) +
-                     '\n mean Heliocentric: ' + str(round(np.mean(data[:, 0]), 2)) + '    mean Synodic: ' +
-                     str(round(np.mean(data[:, 1]), 2)))
-        fig.tight_layout()
-
-        plt.show()
-        """
+        # fig.patch.set_visible(False)
+        # ax.axis('off')
+        # ax.axis('tight')
+        # ax.table(cellText=data.T, rowLabels=labels, colLabels=data_labels, loc='center')
+        # ax.set_title('Accuracy of Various Estimators for target: ' + str(target_classes[k]) +
+        #              '\n with distribution: ' + str(pops) +
+        #              '\n mean Heliocentric: ' + str(round(np.mean(data[:, 0]), 2)) + '    mean Synodic: ' +
+        #              str(round(np.mean(data[:, 1]), 2)))
+        # fig.tight_layout()
+        #
+        # plt.show()
 
     return
 
@@ -1768,18 +1769,33 @@ def synodic_main():
 
 @staticmethod
 def add_classes(master):
-    master['Crossed 1 Hill'] = np.zeros((len(master['Object id']),))
-    master.loc[master['1 Hill Duration'] > 0, 'Crossed 1 Hill'] = 1
+    # master['Crossed 1 Hill'] = np.zeros((len(master['Object id']),))
+    # master.loc[master['1 Hill Duration'] > 0, 'Crossed 1 Hill'] = 1
 
-    master['100+ Days in 1 Hill'] = np.zeros((len(master['Object id']),))
-    master.loc[master['1 Hill Duration'] >= 100, '100+ Days in 1 Hill'] = 1
+    # master['100+ Days in 1 Hill'] = np.zeros((len(master['Object id']),))
+    # master.loc[master['1 Hill Duration'] >= 100, '100+ Days in 1 Hill'] = 1
 
-    master.to_csv('cluster_df_synodic_classes.csv', sep=' ', header=True, index=False)
+    short = 75
+    long = 750
+    master['Classed 1 Hill Duration'] = np.zeros((len(master['Object id']),))
+    master.loc[master['1 Hill Duration'] >= short, 'Classed 1 Hill Duration'] = 1
+    master.loc[master['1 Hill Duration'] >= long , 'Classed 1 Hill Duration'] = 2
+
+    close = 0.00256955529  # moon's nominal orbit
+    far = 0.0038752837677  # soi of ems
+    master['Classed Minimum Distance'] = np.zeros((len(master['Object id']),))
+    master.loc[master['Min. Distance'] >= close, 'Classed Minimum Distance'] = 1
+    master.loc[master['Min. Distance'] >= far, 'Classed Minimum Distance'] = 2
+
+    master = master[master['1 Hill Duration'] > 0]
+
+    master.to_csv('cluster_df_synodic_classes2.csv', sep=' ', header=True, index=False)
     return
 
 
+
 if __name__ == '__main__':
-    file_path = 'cluster_df_synodic.csv'
+    file_path = 'cluster_df_synodic_classes2.csv'
     master = pd.read_csv(file_path, sep=' ', header=0,
                          names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
                                 'STC', "Became Minimoon", 'Taxonomy', "3 Hill Duration", "Helio x at Capture",
@@ -1801,7 +1817,8 @@ if __name__ == '__main__':
                                 "Synodic vy at Capture", "Synodic vz at Capture", "Moon (Synodic) x at Capture",
                                 "Moon (Synodic) y at Capture", "Moon (Synodic) z at Capture",
                                 "Moon (Synodic) vx at Capture", "Moon (Synodic) vy at Capture",
-                                "Moon (Synodic) vz at Capture"])
+                                "Moon (Synodic) vz at Capture", "Crossed 1 Hill", "100+ Days in 1 Hill",
+                                'Classed 1 Hill Duration', 'Classed Minimum Distance'])
 
     # add_classes(master)
 
