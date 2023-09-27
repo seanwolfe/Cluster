@@ -1399,47 +1399,68 @@ def fuzzy_c_main():
 @staticmethod
 def preprocessing_main(X, y):
     random_state = 42
-    biased_train_X, test_X, biased_train_y, test_y = train_test_split(X, y, test_size=0.20, stratify=y,
-                                                                      random_state=random_state)
+    train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.20, stratify=y,
+                                                        random_state=random_state)
 
-    classes = set(biased_train_y)
-    indices = [np.where(biased_train_y == class_i) for i, class_i in enumerate(classes)]
+    classes = set(train_y)
+    indices = [np.where(train_y == class_i) for i, class_i in enumerate(classes)]
     num_in_class = [len(indices_i[0]) for j, indices_i in enumerate(indices)]
-    data_Xy = np.hstack((biased_train_X, np.array([biased_train_y]).T))
+    data_Xy = np.hstack((train_X, np.array([train_y]).T))
     data_class_1 = data_Xy[indices[1], :].reshape((num_in_class[1], len(data_Xy[0])))
     data_class_0 = data_Xy[indices[0], :].reshape((num_in_class[0], len(data_Xy[0])))
     augmented_data_Xy = data_Xy.copy()
 
     if num_in_class[0] > num_in_class[1]:
         ratio = int(num_in_class[0] / num_in_class[1])
+        undersampled_data_Xy = np.vstack((data_class_1, data_class_0[:num_in_class[1], :]))
         for i in range(ratio - 1):
             augmented_data_Xy = np.vstack((augmented_data_Xy, data_class_1))
     elif num_in_class[0] < num_in_class[1]:
         ratio = int(num_in_class[1] / num_in_class[0])
+        undersampled_data_Xy = np.vstack((data_class_0, data_class_1[:num_in_class[0], :]))
         for i in range(ratio - 1):
             augmented_data_Xy = np.vstack((augmented_data_Xy, data_class_0))
     else:
-        pass
+        undersampled_data_Xy = data_Xy.copy()
 
     np.random.shuffle(augmented_data_Xy)
+    np.random.shuffle(undersampled_data_Xy)
 
-    train_X = augmented_data_Xy[:, :-1]
-    train_y = augmented_data_Xy[:, -1].ravel()
+    # Under and over sampled
+    over_train_X = augmented_data_Xy[:, :-1]
+    over_train_y = augmented_data_Xy[:, -1].ravel()
+    under_train_X = undersampled_data_Xy[:, :-1]
+    under_train_y = undersampled_data_Xy[:, -1].ravel()
 
-    indices_new = [np.where(train_y == class_i) for i, class_i in enumerate(classes)]
+    indices_new = [np.where(over_train_y == class_i) for i, class_i in enumerate(classes)]
     num_in_class_new = [len(indices_i[0]) for j, indices_i in enumerate(indices_new)]
 
-    print('Original samples of classes in training: ' + str(num_in_class))
-    print('New samples of classes in training: ' + str(num_in_class_new))
+    indices_new_under = [np.where(under_train_y == class_i) for i, class_i in enumerate(classes)]
+    num_in_class_new_under = [len(indices_i[0]) for j, indices_i in enumerate(indices_new_under)]
 
+    print('Orignal class Distribution: ' + str(num_in_class))
+    print('Oversampled class distribution: ' + str(num_in_class_new))
+    print('Undersampled class distribution: ' + str(num_in_class_new_under) + '\n')
+
+    # Quantile transform
     quantile_transformer = preprocessing.QuantileTransformer(output_distribution='normal', random_state=0)
-    cluster_data_trans = quantile_transformer.fit_transform(test_X)
-    scalar = preprocessing.StandardScaler().fit(train_X)
-    train_scaled = scalar.transform(train_X)
-    train_normed = preprocessing.normalize(train_X, norm='l2')
+    quantile_train_X = quantile_transformer.fit_transform(train_X)
+    quantile_test_X = quantile_transformer.fit_transform(test_X)
 
-    return (cluster_data_trans, train_scaled, train_normed, train_X, train_y, test_X.to_numpy(),
-            test_y.to_numpy(), biased_train_X.to_numpy(), biased_train_y.to_numpy())
+    # Standard scalar
+    scalar_train_X = preprocessing.StandardScaler().fit(train_X)
+    standardscalar_train_X = scalar_train_X.transform(train_X)
+    scalar_test_X = preprocessing.StandardScaler().fit(test_X)
+    standardscalar_test_X = scalar_test_X.transform(test_X)
+
+    # Normalized
+    normalized_train_X = preprocessing.normalize(train_X, norm='l2')
+    normalized_test_X = preprocessing.normalize(test_X, norm='l2')
+
+    return [train_X.to_numpy(), train_y.to_numpy(), over_train_X, over_train_y, under_train_X, under_train_y,
+            quantile_train_X,
+            quantile_test_X, standardscalar_train_X, standardscalar_test_X, normalized_train_X, normalized_test_X,
+            test_X.to_numpy(), test_y.to_numpy()]
 
 
 def OPTICS_main(cluster_data_train, cluster_data_trans):
@@ -1570,6 +1591,8 @@ def estimator_tests():
 
     data_labels = ['Heliocentric', 'Synodic']
 
+    dataset_forms = ['Quantile Transform', 'Standard Scalar', 'Normalized', 'Oversampled', 'Original', 'Undersampled']
+
     #####################################
     # desired options
     ####################################
@@ -1580,6 +1603,7 @@ def estimator_tests():
     target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill']
     target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Crossed 1 Hill', '100+ Days in 1 Hill']
     data_labels = ['Synodic']
+    dataset_forms = ['Original', 'Oversampled', 'Undersampled']
 
     ######################################
     # hyperparameter tuning
@@ -1592,8 +1616,7 @@ def estimator_tests():
         data = []
         for j, data_label in enumerate(data_labels):
             if data_label == 'Heliocentric':
-                transed, scaled, normed, train_X, train_y, test_X, test_y, biased_train_X, biased_train_y = preprocessing_main(
-                    cluster_data_ini.loc[:, ["Helio x at Capture",
+                datasets = preprocessing_main(cluster_data_ini.loc[:, ["Helio x at Capture",
                                              "Helio y at Capture",
                                              "Helio z at Capture",
                                              "Helio vx at Capture",
@@ -1612,8 +1635,7 @@ def estimator_tests():
                                              "Earth (Helio) vy at Capture",
                                              "Earth (Helio) vz at Capture"]], cluster_data_ini[target_label])
             elif data_label == 'Synodic':
-                transed, scaled, normed, train_X, train_y, test_X, test_y, biased_train_X, biased_train_y = preprocessing_main(
-                    cluster_data_ini.loc[:, ["Synodic x at Capture",
+                datasets = preprocessing_main( cluster_data_ini.loc[:, ["Synodic x at Capture",
                                              "Synodic y at Capture",
                                              "Synodic z at Capture",
                                              "Synodic vx at Capture",
@@ -1627,19 +1649,53 @@ def estimator_tests():
                                              "Moon (Synodic) vz at Capture"]], cluster_data_ini[target_label])
 
             for i, classifier in enumerate(classifiers):
-                classifier.fit(train_X, train_y)
-                pred_y = classifier.predict(test_X)
-                class_labels = set(train_y)
-                tn, fp, fn, tp = confusion_matrix(test_y, pred_y, labels=list(class_labels)).ravel()
-                acc = (tn + tp) / (tn + fp + fn + tp)
-                data.append(round(100 * acc, 2))
-                print('Classifier: ' + str(labels[i]))
-                print('Dataset: ' + str(data_labels[j]))
-                print('Target Class: ' + str(target_classes[k]))
-                print('Accuracy: ' + str(acc))
-                print('True Negatives: ' + str(tn) + '    False Positive: ' + str(fp) + '    False Negative: ' +
-                      str(fn) + '    True Positives: ' + str(tp) + '\n')
+                for n, data_type in enumerate(dataset_forms):
+                    if data_type == 'Quantile Transform':
+                        train_X = datasets[6]
+                        train_y = datatsets[1]
+                        test_X = datasets[7]
+                        test_y = datasets[13]
+                    elif data_type == 'Standard Scalar':
+                        train_X = datasets[8]
+                        train_y = datasets[1]
+                        test_X = datasets[9]
+                        test_y = datasets[13]
+                    elif data_type == 'Normalized':
+                        train_X = datasets[10]
+                        train_y = datasets[1]
+                        test_X = datasets[11]
+                        test_y = datasets[13]
+                    elif data_type == 'Oversampled':
+                        train_X = datasets[2]
+                        train_y = datasets[3]
+                        test_X = datasets[12]
+                        test_y = datasets[13]
+                    elif data_type == 'Undersampled':
+                        train_X = datasets[4]
+                        train_y = datasets[5]
+                        test_X = datasets[12]
+                        test_y = datasets[13]
+                    else:
+                        train_X = datasets[0]
+                        train_y = datasets[1]
+                        test_X = datasets[12]
+                        test_y = datasets[13]
 
+                    classifier.fit(train_X, train_y)
+                    pred_y = classifier.predict(test_X)
+                    class_labels = set(train_y)
+                    tn, fp, fn, tp = confusion_matrix(test_y, pred_y, labels=list(class_labels)).ravel()
+                    acc = (tn + tp) / (tn + fp + fn + tp)
+                    data.append(round(100 * acc, 2))
+                    print('Data type: ' + str(dataset_forms[n]))
+                    print('Classifier: ' + str(labels[i]))
+                    print('Dataset: ' + str(data_labels[j]))
+                    print('Target Class: ' + str(target_classes[k]))
+                    print('Accuracy: ' + str(acc))
+                    print('True Negatives: ' + str(tn) + '    False Positive: ' + str(fp) + '    False Negative: ' +
+                          str(fn) + '    True Positives: ' + str(tp) + '\n')
+
+        """
         data = np.array(data).reshape((len(data_labels), len(classifiers)))
         overall_data = cluster_data_ini[target_label]
         num_classes = set(overall_data)
@@ -1662,6 +1718,7 @@ def estimator_tests():
         fig.tight_layout()
 
         plt.show()
+        """
 
     return
 
