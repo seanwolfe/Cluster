@@ -33,6 +33,9 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import VotingClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_validate
+from sklearn.model_selection import KFold
 
 rx_dict = {
     'Best chromosome': re.compile(r"Best chromosome: \[(?P<bchrome>(\d+ ){17}\d)"),
@@ -1448,6 +1451,7 @@ def preprocessing_main(X, y):
     quantile_transformer = preprocessing.QuantileTransformer(output_distribution='normal', random_state=0)
     quantile_train_X = quantile_transformer.fit_transform(train_X)
     quantile_test_X = quantile_transformer.fit_transform(test_X)
+    quantile_train_oversampled_X = quantile_transformer.fit_transform(over_train_X)
 
     # Standard scalar
     scalar_train_X = preprocessing.StandardScaler().fit(train_X)
@@ -1462,7 +1466,7 @@ def preprocessing_main(X, y):
     return [train_X.to_numpy(), train_y.to_numpy(), over_train_X, over_train_y, under_train_X, under_train_y,
             quantile_train_X,
             quantile_test_X, standardscalar_train_X, standardscalar_test_X, normalized_train_X, normalized_test_X,
-            test_X.to_numpy(), test_y.to_numpy()]
+            test_X.to_numpy(), test_y.to_numpy(), quantile_train_oversampled_X]
 
 
 def OPTICS_main(cluster_data_train, cluster_data_trans):
@@ -1576,14 +1580,15 @@ def estimator_tests():
     classifiers = [MLPClassifier(), SVC(), RandomForestClassifier(), GradientBoostingClassifier(), SGDClassifier(),
                    KNeighborsClassifier(), GaussianNB(), DecisionTreeClassifier(),
                    BaggingClassifier(), ExtraTreesClassifier(), AdaBoostClassifier(),
-                   HistGradientBoostingClassifier()]  # ,
+                   HistGradientBoostingClassifier(), VotingClassifier(estimators=[('rf', RandomForestClassifier()),
+                                                ('hgb', HistGradientBoostingClassifier())], voting='soft')]  # ,
     # GaussianProcessClassifier()]
 
     labels = ['Neural Network Classifier', 'Support Vector Machine Classifier', 'Random Forest Classifier',
               'Gradiant Boosting Classifier', 'Stochastic Gradient Descent Classifier', 'K Nearest Neighbor Classifier',
               'Gaussian Naive Bayes', 'Decision Tree Classifier', 'Bagging Classifier',
               'Extremely Randomized Tree Classifier', 'Ada Boost Classifier',
-              'Histogram Gradient Boosting Classifier']  # , 'Gaussian Process Classifier']
+              'Histogram Gradient Boosting Classifier', 'Voting Classifier']  # , 'Gaussian Process Classifier']
 
     target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', 'Not/Crossed 1 Hill', 'Not/100+ Days in 1 Hill',
                       'Taxonomy', 'Classed 1 Hill Duration', 'Classed Minimum Distance']
@@ -1592,27 +1597,29 @@ def estimator_tests():
 
     data_labels = ['Heliocentric', 'Synodic']
 
-    dataset_forms = ['Quantile Transform', 'Standard Scalar', 'Normalized', 'Oversampled', 'Original', 'Undersampled']
+    dataset_forms = ['Quantile Transform', 'Standard Scalar', 'Normalized', 'Oversampled', 'Original', 'Undersampled',
+                     'Quantile Oversampled']
 
     #####################################
     # desired options
     ####################################
-    classifiers = [RandomForestClassifier(), HistGradientBoostingClassifier(),
-                   VotingClassifier(estimators=[('rf', RandomForestClassifier()),
-                                                ('hgb', HistGradientBoostingClassifier())], voting='soft')]
-    labels = ['Random Forest Classifier', 'Histogram Gradient Boosting Classifier', 'Voting Classifier']
-    target_classes = ['Non-STC/STC', 'Prograde/Retrograde', 'TCF/TCo', '1 Hill Duration', 'Minimum Distance']
-    target_labels = ['STC', 'Retrograde', 'Became Minimoon', 'Classed 1 Hill Duration',
-                     'Classed Minimum Distance']
+    classifiers = [HistGradientBoostingClassifier(max_iter=1000, early_stopping=True, random_state=0)]
+    labels = ['Histogram Gradient Boosting Classifier']
+    target_classes = ['1 Hill Duration', 'Minimum Distance']
+    target_labels = ['Classed 1 Hill Duration', 'Classed Minimum Distance']
     data_labels = ['Synodic']
     dataset_forms = ['Oversampled']
+
 
     ######################################
     # hyperparameter tuning
     #####################################
 
-    # important for random forest: num trees, num features considered at each split, tree depth
-    # important for
+    params = {
+        "max_depth": [3, 8],
+        "max_leaf_nodes": [15, 31],
+        "learning_rate": [0.07, 0.3],
+    }
 
     for k, target_label in enumerate(target_labels):
         data = []
@@ -1677,11 +1684,57 @@ def estimator_tests():
                         train_y = datasets[5]
                         test_X = datasets[12]
                         test_y = datasets[13]
+                    elif data_type == 'Quantile Oversampled':
+                        train_X = datasets[14]
+                        train_y = datasets[3]
+                        test_X = datasets[7]
+                        test_y = datasets[13]
                     else:
                         train_X = datasets[0]
                         train_y = datasets[1]
                         test_X = datasets[12]
                         test_y = datasets[13]
+
+                    if labels[i] == 'Histogram Gradient Boosting Classifier':
+                        search = GridSearchCV(classifier, params)
+                        cv = KFold(n_splits=5, shuffle=True, random_state=0)
+                        results = cross_validate(
+                            search, train_X, train_y, cv=cv, return_estimator=True, n_jobs=2
+                        )
+
+                        print(
+                            "Accuracy score with cross-validation:\n"
+                            f"{results['test_score'].mean():.3f} ± "
+                            f"{results['test_score'].std():.3f}"
+                        )
+                        for estimator in results["estimator"]:
+                            print(estimator.best_params_)
+                            print(f"# trees: {estimator.best_estimator_.n_iter_}")
+
+                        index_columns = [f"param_{name}" for name in params.keys()]
+                        columns = index_columns + ["mean_test_score"]
+
+                        inner_cv_results = []
+                        for cv_idx, estimator in enumerate(results["estimator"]):
+                            search_cv_results = pd.DataFrame(estimator.cv_results_)
+                            search_cv_results = search_cv_results[columns].set_index(index_columns)
+                            search_cv_results = search_cv_results.rename(
+                                columns={"mean_test_score": f"CV {cv_idx}"}
+                            )
+                            inner_cv_results.append(search_cv_results)
+                        inner_cv_results = pd.concat(inner_cv_results, axis=1).T
+
+                        color = {"whiskers": "black", "medians": "black", "caps": "black"}
+                        print(inner_cv_results)
+                        inner_cv_results.plot.box(vert=False, color=color)
+                        plt.xlabel("Accuracy score")
+                        plt.ylabel("Parameters")
+                        _ = plt.title(
+                            "Inner CV results with parameters\n"
+                            "(max_depth, max_leaf_nodes, learning_rate)"
+                        )
+
+                        plt.show()
 
                     classifier.fit(train_X, train_y)
                     pred_y = classifier.predict(test_X)
