@@ -1603,7 +1603,8 @@ def estimator_tests():
     #####################################
     # desired options
     ####################################
-    classifiers = [HistGradientBoostingClassifier(max_iter=1000, early_stopping=True, random_state=0)]
+    classifiers = [HistGradientBoostingClassifier(max_iter=1000, early_stopping=True, random_state=0,
+                                                  max_depth=8, max_leaf_nodes=40, learning_rate=0.07)]
     labels = ['Histogram Gradient Boosting Classifier']
     target_classes = ['1 Hill Duration', 'Minimum Distance']
     target_labels = ['Classed 1 Hill Duration', 'Classed Minimum Distance']
@@ -1616,9 +1617,9 @@ def estimator_tests():
     #####################################
 
     params = {
-        "max_depth": [3, 8],
-        "max_leaf_nodes": [15, 31],
-        "learning_rate": [0.07, 0.3],
+        "max_depth": [7, 8],
+        "max_leaf_nodes": [40, 31],
+        "learning_rate": [0.07, 0.1],
     }
 
     for k, target_label in enumerate(target_labels):
@@ -1695,46 +1696,46 @@ def estimator_tests():
                         test_X = datasets[12]
                         test_y = datasets[13]
 
-                    if labels[i] == 'Histogram Gradient Boosting Classifier':
-                        search = GridSearchCV(classifier, params)
-                        cv = KFold(n_splits=5, shuffle=True, random_state=0)
-                        results = cross_validate(
-                            search, train_X, train_y, cv=cv, return_estimator=True, n_jobs=2
-                        )
-
-                        print(
-                            "Accuracy score with cross-validation:\n"
-                            f"{results['test_score'].mean():.3f} ± "
-                            f"{results['test_score'].std():.3f}"
-                        )
-                        for estimator in results["estimator"]:
-                            print(estimator.best_params_)
-                            print(f"# trees: {estimator.best_estimator_.n_iter_}")
-
-                        index_columns = [f"param_{name}" for name in params.keys()]
-                        columns = index_columns + ["mean_test_score"]
-
-                        inner_cv_results = []
-                        for cv_idx, estimator in enumerate(results["estimator"]):
-                            search_cv_results = pd.DataFrame(estimator.cv_results_)
-                            search_cv_results = search_cv_results[columns].set_index(index_columns)
-                            search_cv_results = search_cv_results.rename(
-                                columns={"mean_test_score": f"CV {cv_idx}"}
-                            )
-                            inner_cv_results.append(search_cv_results)
-                        inner_cv_results = pd.concat(inner_cv_results, axis=1).T
-
-                        color = {"whiskers": "black", "medians": "black", "caps": "black"}
-                        print(inner_cv_results)
-                        inner_cv_results.plot.box(vert=False, color=color)
-                        plt.xlabel("Accuracy score")
-                        plt.ylabel("Parameters")
-                        _ = plt.title(
-                            "Inner CV results with parameters\n"
-                            "(max_depth, max_leaf_nodes, learning_rate)"
-                        )
-
-                        plt.show()
+                    # if labels[i] == 'Histogram Gradient Boosting Classifier':
+                    #     search = GridSearchCV(classifier, params)
+                    #     cv = KFold(n_splits=5, shuffle=True, random_state=0)
+                    #     results = cross_validate(
+                    #         search, train_X, train_y, cv=cv, return_estimator=True, n_jobs=2
+                    #     )
+                    #
+                    #     print(
+                    #         "Accuracy score with cross-validation:\n"
+                    #         f"{results['test_score'].mean():.3f} ± "
+                    #         f"{results['test_score'].std():.3f}"
+                    #     )
+                    #     for estimator in results["estimator"]:
+                    #         print(estimator.best_params_)
+                    #         print(f"# trees: {estimator.best_estimator_.n_iter_}")
+                    #
+                    #     index_columns = [f"param_{name}" for name in params.keys()]
+                    #     columns = index_columns + ["mean_test_score"]
+                    #
+                    #     inner_cv_results = []
+                    #     for cv_idx, estimator in enumerate(results["estimator"]):
+                    #         search_cv_results = pd.DataFrame(estimator.cv_results_)
+                    #         search_cv_results = search_cv_results[columns].set_index(index_columns)
+                    #         search_cv_results = search_cv_results.rename(
+                    #             columns={"mean_test_score": f"CV {cv_idx}"}
+                    #         )
+                    #         inner_cv_results.append(search_cv_results)
+                    #     inner_cv_results = pd.concat(inner_cv_results, axis=1).T
+                    #
+                    #     color = {"whiskers": "black", "medians": "black", "caps": "black"}
+                    #     print(inner_cv_results)
+                    #     inner_cv_results.plot.box(vert=False, color=color)
+                    #     plt.xlabel("Accuracy score")
+                    #     plt.ylabel("Parameters")
+                    #     _ = plt.title(
+                    #         "Inner CV results with parameters\n"
+                    #         "(max_depth, max_leaf_nodes, learning_rate)"
+                    #     )
+                    #
+                    #     plt.show()
 
                     classifier.fit(train_X, train_y)
                     pred_y = classifier.predict(test_X)
@@ -1829,7 +1830,7 @@ def add_classes(master):
     # master.loc[master['1 Hill Duration'] >= 100, '100+ Days in 1 Hill'] = 1
 
     short = 75
-    long = 750
+    long = 150
     master['Classed 1 Hill Duration'] = np.zeros((len(master['Object id']),))
     master.loc[master['1 Hill Duration'] >= short, 'Classed 1 Hill Duration'] = 1
     master.loc[master['1 Hill Duration'] >= long , 'Classed 1 Hill Duration'] = 2
