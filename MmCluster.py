@@ -1058,6 +1058,17 @@ def make_set3(master):
 
 
 def make_set4(master, variable, axislabel, ylim):
+
+    fig9 = plt.figure()
+    bin_size = 0.0001
+    var_pts = variable
+    # Calculate the number of bins based on data range and bin size
+    var_data_range = max(var_pts) - min(var_pts)
+    var_num_bins = int(var_data_range / bin_size)
+    plt.hist(var_pts, bins=var_num_bins)
+    plt.xlabel('Duration in 1 Hill (days)')
+    plt.ylabel('Count')
+
     fig8 = plt.figure()
     ax1 = plt.subplot(3, 3, 1)
     ax1.scatter(master['Synodic x at Capture'], variable, s=0.1)
@@ -1545,7 +1556,7 @@ def OPTICS_main(cluster_data_train, cluster_data_trans):
 
 
 def estimator_tests():
-    file_path = 'cluster_df_synodic_classes2.csv'
+    file_path = 'data_moon_70.csv'
     cluster_data_ini = pd.read_csv(file_path, sep=' ', header=0,
                                    names=["Object id", "1 Hill Duration", "Min. Distance", "EMS Duration", 'Retrograde',
                                           'STC', "Became Minimoon", 'Taxonomy', "3 Hill Duration", "Helio x at Capture",
@@ -1603,9 +1614,12 @@ def estimator_tests():
     #####################################
     # desired options
     ####################################
-    classifiers = [HistGradientBoostingClassifier(max_iter=1000, early_stopping=True, random_state=0,
-                                                  max_depth=8, max_leaf_nodes=40, learning_rate=0.07)]
-    labels = ['Histogram Gradient Boosting Classifier']
+    classifiers = [VotingClassifier(estimators=[('rf', RandomForestClassifier(n_estimators=200, max_features=6,
+                                                                              max_depth=8)),
+                                                ('hgb', HistGradientBoostingClassifier(max_depth=7, max_leaf_nodes=80,
+                                                                                       learning_rate=0.3))],
+                                    voting='soft')]
+    labels = ['Voting Classifier']
     target_classes = ['1 Hill Duration', 'Minimum Distance']
     target_labels = ['Classed 1 Hill Duration', 'Classed Minimum Distance']
     data_labels = ['Synodic']
@@ -1620,6 +1634,9 @@ def estimator_tests():
         "max_depth": [7, 8],
         "max_leaf_nodes": [40, 31],
         "learning_rate": [0.07, 0.1],
+    }
+    params = {
+        "max_features": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     }
 
     for k, target_label in enumerate(target_labels):
@@ -1696,21 +1713,21 @@ def estimator_tests():
                         test_X = datasets[12]
                         test_y = datasets[13]
 
-                    # if labels[i] == 'Histogram Gradient Boosting Classifier':
+                    # if labels[i] == 'Random Forest Classifier':
                     #     search = GridSearchCV(classifier, params)
                     #     cv = KFold(n_splits=5, shuffle=True, random_state=0)
                     #     results = cross_validate(
-                    #         search, train_X, train_y, cv=cv, return_estimator=True, n_jobs=2
+                    #         search, train_X, train_y, cv=cv, return_estimator=True, n_jobs=2, scoring='f1'
                     #     )
                     #
                     #     print(
-                    #         "Accuracy score with cross-validation:\n"
+                    #         "f1 score with cross-validation:\n"
                     #         f"{results['test_score'].mean():.3f} ± "
                     #         f"{results['test_score'].std():.3f}"
                     #     )
                     #     for estimator in results["estimator"]:
                     #         print(estimator.best_params_)
-                    #         print(f"# trees: {estimator.best_estimator_.n_iter_}")
+                    #         # print(f"# trees: {estimator.best_estimator_.n_iter_}")
                     #
                     #     index_columns = [f"param_{name}" for name in params.keys()]
                     #     columns = index_columns + ["mean_test_score"]
@@ -1727,14 +1744,9 @@ def estimator_tests():
                     #
                     #     color = {"whiskers": "black", "medians": "black", "caps": "black"}
                     #     print(inner_cv_results)
-                    #     inner_cv_results.plot.box(vert=False, color=color)
-                    #     plt.xlabel("Accuracy score")
-                    #     plt.ylabel("Parameters")
-                    #     _ = plt.title(
-                    #         "Inner CV results with parameters\n"
-                    #         "(max_depth, max_leaf_nodes, learning_rate)"
-                    #     )
-                    #
+                    #     inner_cv_results.plot.box(vert=False, color=color, showfliers=False)
+                    #     plt.xlabel("f1 score")
+                    #     plt.ylabel("max_features")
                     #     plt.show()
 
                     classifier.fit(train_X, train_y)
@@ -1829,21 +1841,22 @@ def add_classes(master):
     # master['100+ Days in 1 Hill'] = np.zeros((len(master['Object id']),))
     # master.loc[master['1 Hill Duration'] >= 100, '100+ Days in 1 Hill'] = 1
 
-    short = 75
-    long = 150
+    short = 70
+    # long = 200
     master['Classed 1 Hill Duration'] = np.zeros((len(master['Object id']),))
     master.loc[master['1 Hill Duration'] >= short, 'Classed 1 Hill Duration'] = 1
-    master.loc[master['1 Hill Duration'] >= long , 'Classed 1 Hill Duration'] = 2
+    # master.loc[master['1 Hill Duration'] >= long, 'Classed 1 Hill Duration'] = 2
 
+    # close = 0.00024064514  # geo
     close = 0.00256955529  # moon's nominal orbit
-    far = 0.0038752837677  # soi of ems
+    # far = 0.0038752837677  # soi of ems
     master['Classed Minimum Distance'] = np.zeros((len(master['Object id']),))
     master.loc[master['Min. Distance'] >= close, 'Classed Minimum Distance'] = 1
-    master.loc[master['Min. Distance'] >= far, 'Classed Minimum Distance'] = 2
+    # master.loc[master['Min. Distance'] >= far, 'Classed Minimum Distance'] = 2
 
     master = master[master['1 Hill Duration'] > 0]
 
-    master.to_csv('cluster_df_synodic_classes2.csv', sep=' ', header=True, index=False)
+    master.to_csv('data_moon_70.csv', sep=' ', header=True, index=False)
     return
 
 
@@ -1877,7 +1890,7 @@ if __name__ == '__main__':
     # add_classes(master)
 
     # make_set3(master)
-    # make_set4(master, master['1 Hill Duration'], '1 Hill Duration', [0,10000])
+    # make_set4(master, master['Min. Distance'], 'Min. Distance', [0,10000])
 
     # synodic_main()
     # parse_main()
