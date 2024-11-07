@@ -1,3 +1,7 @@
+If this work is of use to you, please consider citing the following:
+
+Wolfe, Sean, and M. Reza Emami. "A Data-driven Approach to the Classification of Temporary Captures in the Earth-Moon System." 2024 IEEE Aerospace Conference. IEEE, 2024.
+
 # Classifier Hyperparameter Tuning and Evaluation
 
 This repository contains a Python implementation for training and evaluating various classifiers, performing hyperparameter tuning, and analyzing multiple dataset forms. The primary goal is to apply machine learning classifiers to a variety of tasks with custom dataset preprocessing and tuning strategies.
