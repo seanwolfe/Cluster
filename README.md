@@ -1,4 +1,4 @@
-If this work is of use to you, please consider citing the following:
+If this work is of use to you, consider citing the following:
 
 Wolfe, Sean, and M. Reza Emami. "A Data-driven Approach to the Classification of Temporary Captures in the Earth-Moon System." 2024 IEEE Aerospace Conference. IEEE, 2024.
 
